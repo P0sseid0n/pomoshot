@@ -1,0 +1,9 @@
+@import 'tailwindcss';
+
+body {
+	@apply bg-neutral-50 font-sans h-screen;
+}
+
+body > #root {
+	@apply h-full;
+}
