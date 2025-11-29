@@ -1,18 +1,22 @@
 import { Elysia, t } from 'elysia'
+import { cors } from '@elysiajs/cors'
 import { GoogleGenAI, Part, Type } from '@google/genai'
+import { openapi } from '@elysiajs/openapi'
 
 const ai = new GoogleGenAI({})
 
 const fileToBase64 = async (file: File) => (await file.bytes()).toBase64()
 
-const app = new Elysia()
+new Elysia()
+	.use(cors())
+	.use(openapi())
 	.post(
-		'/image',
+		'/lessons/extract',
 		async ({ body, status }) => {
-			console.log(`🚀 ${body.file.length} Arquivos recebidos`)
+			console.log(`🚀 ${body.image.length} Arquivos recebidos`)
 			const parts: Part[] = []
 
-			for (const file of body.file) {
+			for (const file of body.image) {
 				const data = await fileToBase64(file)
 
 				parts.push({
@@ -55,18 +59,32 @@ const app = new Elysia()
 					},
 				})
 
-				return status(200, response.text)
+				if (!response.text) {
+					throw new Error('Resposta vazia do modelo')
+				}
+
+				const parsed = JSON.parse(response.text)
+
+				return status(200, parsed)
 			} catch (error) {
 				console.error('Erro ao gerar conteúdo:', error)
-				return status(500, { error: 'Erro ao processar os arquivos' })
+				return status(500, { error: 'Erro ao processar os arquivos', details: String(error) })
 			}
 		},
 		{
 			body: t.Object({
-				file: t.Files({ type: 'image' }),
+				image: t.Files({ type: 'image' }),
 			}),
+			response: {
+				200: t.Object({
+					totalMinutes: t.Number(),
+					subject: t.String(),
+					topics: t.Array(t.String()),
+				}),
+				500: t.Object({ error: t.String(), details: t.String() }),
+			},
 		}
 	)
-	.listen(3000)
-
-console.log(`🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`)
+	.listen(3000, server => {
+		console.log(`🦊 Elysia is running at ${server.hostname}:${server.port}`)
+	})
