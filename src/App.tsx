@@ -27,7 +27,12 @@ function App() {
 	} else if (stage === AppStage.UPLOAD) {
 		return (
 			<AppContainer>
-				<UploadScreen onNextStage={() => setStage(AppStage.PROCESSING)} onBackStage={() => setStage(AppStage.WELCOME)} />
+				<UploadScreen
+					onNextStage={() => {
+						setStage(AppStage.PROCESSING)
+					}}
+					onBackStage={() => setStage(AppStage.WELCOME)}
+				/>
 			</AppContainer>
 		)
 	} else {

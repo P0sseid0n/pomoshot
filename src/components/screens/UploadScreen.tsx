@@ -2,12 +2,22 @@ import { useEffect, useRef, useState } from 'react'
 import Button from '../ui/Button'
 import Logo from '../ui/Logo'
 import UploadIcon from '../icons/Upload'
+import services from '../../services'
 
-export default function UploadScreen({ onNextStage, onBackStage }: { onNextStage: () => void; onBackStage?: () => void }) {
+export default function UploadScreen({
+	onNextStage,
+	onBackStage,
+}: {
+	onNextStage: (files: File[]) => void
+	onBackStage?: () => void
+}) {
 	const fileInputRef = useRef<HTMLInputElement>(null)
 	const [files, setFiles] = useState<File[]>([])
 	const [filePreviews, setFilePreviews] = useState<string[]>([])
 	const [isDragging, setIsDragging] = useState(false)
+	const [isProcessing, setIsProcessing] = useState(false)
+
+	const [error, setError] = useState<string>()
 
 	const processFiles = (selectedFiles: File[]) => {
 		setFiles(prev => [...prev, ...selectedFiles])
@@ -53,6 +63,21 @@ export default function UploadScreen({ onNextStage, onBackStage }: { onNextStage
 
 			if (droppedFiles.length > 0) processFiles(droppedFiles)
 			// else setError('apenas arquivos de imagem são permitidos.')
+		}
+	}
+
+	const handleImportLessons = async () => {
+		if (files.length === 0) return
+
+		try {
+			setIsProcessing(true)
+			const lessons = await services.extractLessons(files)
+			onNextStage(lessons.data)
+		} catch (error) {
+			console.error('Erro ao importar aulas:', error)
+			setError('Erro ao importar aulas. Tente novamente.')
+		} finally {
+			setIsProcessing(false)
 		}
 	}
 
@@ -110,7 +135,7 @@ export default function UploadScreen({ onNextStage, onBackStage }: { onNextStage
 				</div>
 
 				{filePreviews.length > 0 && (
-					<div className="flex flex-row flex-wrap gap-4 justify-center">
+					<div className="flex flex-row flex-wrap gap-4 justify-center mb-4">
 						{filePreviews.map((preview, index) => (
 							<div className="aspect-video max-h-24 rounded-xl overflow-hidden relative group" key={index}>
 								<div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors"></div>
@@ -142,11 +167,13 @@ export default function UploadScreen({ onNextStage, onBackStage }: { onNextStage
 					</div>
 				)}
 
-				<div className="flex flex-row gap-8 mt-8">
+				{error && <p className="text-red-500 text-sm mt-4 text-center bg-red-50 p-3 rounded-lg w-full max-w-md">{error}</p>}
+
+				<div className="flex flex-row gap-8 mt-4">
 					<Button variant="ghost" onClick={onBackStage}>
 						voltar
 					</Button>
-					<Button variant="primary" onClick={onNextStage}>
+					<Button variant="primary" onClick={handleImportLessons} disabled={files.length === 0} isLoading={isProcessing}>
 						importar aulas
 					</Button>
 				</div>
