@@ -1,17 +1,10 @@
-import axios from 'axios'
+import { treaty } from '@elysiajs/eden'
+import type { App } from '@pomoshot/backend'
 
-const api = axios.create({
-	baseURL: import.meta.env.API_URL || 'http://localhost:3000',
-})
+const client = treaty<App>(import.meta.env.API_URL || 'http://localhost:3000')
 
 export default {
-	extractLessons: async (images: File[]) => {
-		const body = new FormData()
-
-		images.forEach(image => {
-			body.append('image', image)
-		})
-
-		return api.post('/lessons/extract', body)
+	extractLessons: (image: File[]) => {
+		return client.lessons.extract.post({ image })
 	},
 }

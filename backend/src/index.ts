@@ -7,7 +7,7 @@ const ai = new GoogleGenAI({})
 
 const fileToBase64 = async (file: File) => (await file.bytes()).toBase64()
 
-new Elysia()
+const app = new Elysia()
 	.use(cors())
 	.use(openapi())
 	.post(
@@ -88,3 +88,5 @@ new Elysia()
 	.listen(3000, server => {
 		console.log(`🦊 Elysia is running at ${server.hostname}:${server.port}`)
 	})
+
+export type App = typeof app
