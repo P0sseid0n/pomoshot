@@ -1,6 +1,8 @@
 import { useState } from 'react'
+import type { LessonData } from './types'
 import StartScreen from './components/screens/StartScreen'
 import UploadScreen from './components/screens/UploadScreen'
+import ProcessingScreen from './components/screens/ProcessingScreen'
 
 const AppStage = {
 	WELCOME: 0,
@@ -17,6 +19,7 @@ function AppContainer({ children }: { children: React.ReactNode }) {
 
 function App() {
 	const [stage, setStage] = useState<AppStage>(AppStage.WELCOME)
+	const [lessonData, setLessonData] = useState<LessonData>()
 
 	if (stage === AppStage.WELCOME) {
 		return (
@@ -28,11 +31,19 @@ function App() {
 		return (
 			<AppContainer>
 				<UploadScreen
-					onNextStage={() => {
-						setStage(AppStage.PROCESSING)
+					onProcessing={isProcessing => setStage(isProcessing ? AppStage.PROCESSING : AppStage.UPLOAD)}
+					onNextStage={data => {
+						setStage(AppStage.CONFIG)
+						setLessonData(data)
 					}}
 					onBackStage={() => setStage(AppStage.WELCOME)}
 				/>
+			</AppContainer>
+		)
+	} else if (stage === AppStage.PROCESSING) {
+		return (
+			<AppContainer>
+				<ProcessingScreen />
 			</AppContainer>
 		)
 	} else {

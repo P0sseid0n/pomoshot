@@ -1,11 +1,14 @@
 {
 	"name": "pomoshot",
 	"private": true,
+	"scripts": {
+		"dev": "bun --filter '*' dev"
+	},
 	"workspaces": [
 		"backend",
 		"frontend"
 	],
-	"scripts": {
-		"dev": "bun --filter '*' dev"
+	"dependencies": {
+		"@sinclair/typebox": "^0.34.41"
 	}
 }

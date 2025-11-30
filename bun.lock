@@ -3,6 +3,9 @@
   "workspaces": {
     "": {
       "name": "pomoshot",
+      "dependencies": {
+        "@sinclair/typebox": "^0.34.41",
+      },
     },
     "backend": {
       "name": "@pomoshot/backend",

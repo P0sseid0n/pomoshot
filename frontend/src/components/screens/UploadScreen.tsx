@@ -1,15 +1,18 @@
 import { useEffect, useRef, useState } from 'react'
+import type { Treaty } from '@elysiajs/eden'
 import Button from '../ui/Button'
 import Logo from '../ui/Logo'
 import UploadIcon from '../icons/Upload'
-import services from '../../services'
+import { Client } from '../../api'
 
 export default function UploadScreen({
+	onProcessing,
 	onNextStage,
 	onBackStage,
 }: {
-	onNextStage: (files: File[]) => void
-	onBackStage?: () => void
+	onProcessing: (isProcessing: boolean) => void
+	onNextStage: (data: Treaty.Data<typeof Client.lessons.extract.post>) => void
+	onBackStage: () => void
 }) {
 	const fileInputRef = useRef<HTMLInputElement>(null)
 	const [files, setFiles] = useState<File[]>([])
@@ -62,7 +65,7 @@ export default function UploadScreen({
 			const droppedFiles = Array.from(e.dataTransfer.files).filter(file => file.type.startsWith('image/'))
 
 			if (droppedFiles.length > 0) processFiles(droppedFiles)
-			// else setError('apenas arquivos de imagem são permitidos.')
+			else setError('apenas arquivos de imagem são permitidos.')
 		}
 	}
 
@@ -71,11 +74,19 @@ export default function UploadScreen({
 
 		try {
 			setIsProcessing(true)
-			const lessons = await services.extractLessons(files)
-			onNextStage(lessons.data)
+			onProcessing(true)
+			const { data, error } = await Client.lessons.extract.post({ images: files })
+
+			if (error) {
+				onProcessing(false)
+				return setError(String(error.value) || 'erro no processamento das aulas. Tente novamente.')
+			}
+
+			onNextStage(data)
 		} catch (error) {
 			console.error('Erro ao importar aulas:', error)
-			setError('Erro ao importar aulas. Tente novamente.')
+			onProcessing(false)
+			setError('erro no processamento das aulas. Tente novamente.')
 		} finally {
 			setIsProcessing(false)
 		}
