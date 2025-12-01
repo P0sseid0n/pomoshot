@@ -1,22 +1,25 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Treaty } from '@elysiajs/eden'
 import Button from '../ui/Button'
 import Logo from '../ui/Logo'
 import UploadIcon from '../icons/Upload'
 import { Client } from '../../api'
+import Footer from '../ui/Footer'
 
 export default function UploadScreen({
 	onProcessing,
 	onNextStage,
 	onBackStage,
+	onReset,
 }: {
 	onProcessing: (isProcessing: boolean) => void
 	onNextStage: (data: Treaty.Data<typeof Client.lessons.extract.post>) => void
 	onBackStage: () => void
+	onReset: () => void
 }) {
 	const fileInputRef = useRef<HTMLInputElement>(null)
 	const [files, setFiles] = useState<File[]>([])
-	const [filePreviews, setFilePreviews] = useState<string[]>([])
+	const filePreviews = useMemo(() => files.map(file => URL.createObjectURL(file)), [files])
 	const [isDragging, setIsDragging] = useState(false)
 	const [isProcessing, setIsProcessing] = useState(false)
 
@@ -24,8 +27,6 @@ export default function UploadScreen({
 
 	const processFiles = (selectedFiles: File[]) => {
 		setFiles(prev => [...prev, ...selectedFiles])
-		const selectedPreviews = selectedFiles.map(file => URL.createObjectURL(file))
-		setFilePreviews(prev => [...prev, ...selectedPreviews])
 	}
 
 	const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -40,11 +41,6 @@ export default function UploadScreen({
 
 	const handleRemoveFile = (index: number) => {
 		setFiles(prev => prev.filter((_, i) => i !== index))
-
-		setFilePreviews(prev => {
-			URL.revokeObjectURL(prev[index])
-			return prev.filter((_, i) => i !== index)
-		})
 	}
 
 	const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
@@ -97,10 +93,24 @@ export default function UploadScreen({
 			filePreviews.forEach(url => URL.revokeObjectURL(url))
 		}
 	}, [filePreviews])
+
+	useEffect(() => {
+		const pasteHandler = async (e: ClipboardEvent) => {
+			const pastedFiles = Array.from(e.clipboardData?.files || []).filter(f => f.type.startsWith('image/'))
+
+			if (pastedFiles.length > 0) {
+				processFiles(pastedFiles)
+				e.preventDefault()
+			}
+		}
+
+		window.addEventListener('paste', pasteHandler)
+		return () => window.removeEventListener('paste', pasteHandler)
+	}, [])
 	return (
 		<div className="flex flex-col items-center justify-between w-full h-full p-6 space-y-8">
 			<header className="flex flex-row justify-between w-full">
-				<Logo className="text-xl" />
+				<Logo className="text-2xl" onClick={onReset} />
 
 				<div>{/* Perfil */}</div>
 			</header>
@@ -113,9 +123,7 @@ export default function UploadScreen({
 
 				<div
 					className={`w-full max-w-md border-2 border-dashed rounded-3xl p-8 flex flex-col items-center justify-center cursor-pointer transition-all duration-300 group mb-8 h-40 relative overflow-hidden ${
-						isDragging
-							? 'border-orange-500 bg-orange-50 scale-105 shadow-lg'
-							: 'border-neutral-200 hover:border-orange-300 bg-white'
+						isDragging ? 'border-red-500 bg-red-50 scale-105 shadow-lg' : 'border-neutral-200 hover:border-red-300 bg-white'
 					}`}
 					onClick={() => fileInputRef.current?.click()}
 					onDragOver={handleDragOver}
@@ -135,12 +143,12 @@ export default function UploadScreen({
 
 					<div
 						className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-3 transition-colors ${
-							isDragging ? 'bg-orange-100 text-orange-600' : 'bg-neutral-50 text-neutral-400 group-hover:text-orange-500'
+							isDragging ? 'bg-red-100 text-red-600' : 'bg-neutral-50 text-neutral-400 group-hover:text-red-500'
 						}`}
 					>
 						<UploadIcon />
 					</div>
-					<p className={`font-medium transition-colors ${isDragging ? 'text-orange-700' : 'text-neutral-600'}`}>
+					<p className={`font-medium transition-colors ${isDragging ? 'text-red-700' : 'text-neutral-600'}`}>
 						{isDragging ? 'solte para adicionar' : 'clique ou arraste'}
 					</p>
 				</div>
@@ -190,14 +198,7 @@ export default function UploadScreen({
 				</div>
 			</main>
 
-			<footer>
-				<p className="text-neutral-400 text-md space-x-1">
-					<span>made by</span>
-					<a href="" className="font-medium">
-						P0sseid0n
-					</a>
-				</p>
-			</footer>
+			<Footer />
 		</div>
 	)
 }

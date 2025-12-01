@@ -1,58 +1,53 @@
 import { useState } from 'react'
-import type { LessonData } from './types'
+import { type LessonData, ScreenStage } from './types'
 import StartScreen from './components/screens/StartScreen'
 import UploadScreen from './components/screens/UploadScreen'
 import ProcessingScreen from './components/screens/ProcessingScreen'
-
-const AppStage = {
-	WELCOME: 0,
-	UPLOAD: 1,
-	PROCESSING: 2,
-	CONFIG: 3,
-	SCHEDULE: 4,
-} as const
-type AppStage = (typeof AppStage)[keyof typeof AppStage]
-
-function AppContainer({ children }: { children: React.ReactNode }) {
-	return <div className="h-screen max-w-4xl mx-auto flex flex-col items-center justify-center">{children}</div>
-}
+import SetupScreen from './components/screens/SetupScreen'
+import PomodoroScreen from './components/screens/PomodoroScreen'
 
 function App() {
-	const [stage, setStage] = useState<AppStage>(AppStage.WELCOME)
+	const [stage, setStage] = useState<ScreenStage>(ScreenStage.WELCOME)
 	const [lessonData, setLessonData] = useState<LessonData>()
+	const [focoDuration, setFocoDuration] = useState<number>()
+	const [breakDuration, setBreakDuration] = useState<number>()
 
-	if (stage === AppStage.WELCOME) {
-		return (
-			<AppContainer>
-				<StartScreen onStart={() => setStage(AppStage.UPLOAD)} />
-			</AppContainer>
-		)
-	} else if (stage === AppStage.UPLOAD) {
-		return (
-			<AppContainer>
-				<UploadScreen
-					onProcessing={isProcessing => setStage(isProcessing ? AppStage.PROCESSING : AppStage.UPLOAD)}
-					onNextStage={data => {
-						setStage(AppStage.CONFIG)
-						setLessonData(data)
-					}}
-					onBackStage={() => setStage(AppStage.WELCOME)}
-				/>
-			</AppContainer>
-		)
-	} else if (stage === AppStage.PROCESSING) {
-		return (
-			<AppContainer>
-				<ProcessingScreen />
-			</AppContainer>
-		)
-	} else {
-		return (
-			<AppContainer>
-				<div>outras telas em breve...</div>
-			</AppContainer>
-		)
+	const screens = {
+		[ScreenStage.WELCOME]: <StartScreen onStart={() => setStage(ScreenStage.UPLOAD)} />,
+		[ScreenStage.UPLOAD]: (
+			<UploadScreen
+				onProcessing={isProcessing => setStage(isProcessing ? ScreenStage.PROCESSING : ScreenStage.UPLOAD)}
+				onNextStage={data => {
+					setStage(ScreenStage.SETUP)
+					setLessonData(data)
+				}}
+				onReset={() => setStage(ScreenStage.WELCOME)}
+				onBackStage={() => setStage(ScreenStage.WELCOME)}
+			/>
+		),
+		[ScreenStage.PROCESSING]: <ProcessingScreen />,
+		[ScreenStage.SETUP]: (
+			<SetupScreen
+				lessonData={lessonData!}
+				onStartSession={(focoDuration, breakDuration) => {
+					setFocoDuration(focoDuration)
+					setBreakDuration(breakDuration)
+					setStage(ScreenStage.POMODORO)
+				}}
+				onReset={() => setStage(ScreenStage.WELCOME)}
+			/>
+		),
+		[ScreenStage.POMODORO]: (
+			<PomodoroScreen
+				lessonData={lessonData!}
+				focoDuration={focoDuration!}
+				breakDuration={breakDuration!}
+				onReset={() => setStage(ScreenStage.WELCOME)}
+			/>
+		),
 	}
+
+	return <div className="h-screen max-w-4xl mx-auto">{screens[stage]}</div>
 }
 
 export default App

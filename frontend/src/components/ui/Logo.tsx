@@ -1,8 +1,13 @@
-export default function Logo({ className }: { className?: string }) {
+export default function Logo({ className, onClick }: { className?: string; onClick?: () => void }) {
+	let classesNames = 'font-bold tracking-tighter select-none '
+
+	if (onClick) classesNames += ' cursor-pointer'
+	if (className) classesNames += ' ' + className
+
 	return (
-		<h1 className={'font-bold tracking-tighter select-none ' + (className ?? '')}>
+		<h1 onClick={onClick} className={classesNames}>
 			pomoshot
-			<span className="text-orange-400">.</span>
+			<span className="text-red-500 ml-1">.</span>
 		</h1>
 	)
 }

@@ -4,6 +4,10 @@ body {
 	@apply bg-neutral-50 font-sans h-screen;
 }
 
+body.dark {
+	@apply bg-neutral-900 text-neutral-200;
+}
+
 body > #root {
 	@apply h-full;
 }
