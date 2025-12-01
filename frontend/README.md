@@ -1,75 +1,120 @@
-# React + TypeScript + Vite
+# 📘 **pomoshot. — Frontend**
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Frontend da aplicação **pomoshot.**, responsável pela interface onde o usuário envia capturas de tela, configura seus blocos de estudo e utiliza o cronômetro Pomodoro gerado a partir da análise por IA.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## 🚀 Visão Geral
 
-## React Compiler
+Este workspace contém a interface construída com **React + TypeScript**, utilizando **Tailwind CSS** para estilização e **Eden Treaty** para comunicação tipada com o backend Elysia.
 
-The React Compiler is enabled on this template. See [this documentation](https://react.dev/learn/react-compiler) for more information.
+O frontend é totalmente focado em:
 
-Note: This will impact Vite dev & build performances.
+-  Upload de imagens (drag & drop, input e paste)
+-  Visualização das capturas
+-  Processamento assíncrono com feedback de loading
+-  Configuração dos blocos de estudo (foco/pausa)
+-  Execução do cronômetro Pomodoro
+-  Fluxo suave entre telas
 
-## Expanding the ESLint configuration
+Este projeto foi estruturado para ser simples, direto e fácil de expandir.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+---
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## 🛠️ Tecnologias usadas
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+-  **React**
+-  **TypeScript**
+-  **Tailwind CSS**
+-  **Eden Treaty** (cliente HTTP tipado)
+-  **Bun** (para desenvolvimento)
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+---
+
+## ▶️ Como rodar o frontend
+
+A partir da raiz do monorepo:
+
+```sh
+bun install
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Entre no workspace:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```sh
+cd frontend
 ```
+
+Inicie o servidor de desenvolvimento:
+
+```sh
+bun dev
+```
+
+A aplicação estará disponível em:
+
+```
+http://localhost:3000
+```
+
+Caso a porta seja diferente, o terminal exibirá o endereço correto.
+
+---
+
+## 📁 Estrutura de pastas
+
+```
+frontend/
+  ├── src/
+      ├── api/            # Cliente Eden Treaty
+      ├── components/     # Componentes reutilizáveis e telas
+      ├── icons/          # Ícones SVG customizados
+      ├── ui/             # Elementos básicos de interface
+      ├── utils/          # Funções auxiliares
+      ├── types/          # Tipagens centrais
+      ├── public/         # Arquivos estáticos
+      └── main.tsx        # Entry point
+```
+
+---
+
+## 🔄 Fluxo do usuário
+
+1. **UploadScreen** — Usuário envia imagens (drag & drop / paste)
+2. **ProcessingScreen** — IA analisa lições
+3. **SetupScreen** — Define blocos de foco/pausa
+4. **PomodoroScreen** — Timer executa as sessões
+
+As telas são controladas pelo `App.tsx` via enum de estágios.
+
+---
+
+## 🔌 Comunicação com o backend
+
+A comunicação é feita usando **Eden Treaty**, que gera um cliente HTTP totalmente tipado com base nas rotas do backend.
+
+Exemplo:
+
+```ts
+const { data, error } = await Client.lessons.extract.post({ images })
+```
+
+Isso garante **tipos consistentes** entre backend e frontend.
+
+---
+
+## 🧭 Próximos passos (Roadmap do frontend)
+
+-  [ ] Modo escuro
+-  [ ] Melhorias visuais no cronômetro
+-  [ ] Animações (Framer Motion)
+-  [ ] Edição manual dos blocos de estudo
+-  [ ] Histórico local de sessões concluídas
+-  [ ] Suporte total para mobile
+-  [ ] Feedback sonoro ao final do bloco
+
+---
+
+## 📌 Status
+
+Workspace em desenvolvimento ativo. Nenhuma licença aplicada ainda.
