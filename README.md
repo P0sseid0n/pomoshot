@@ -99,4 +99,10 @@ Funcionalidades planejadas:
 
 ## 📌 Status
 
-Projeto em desenvolvimento. Nenhuma licença aplicada no momento.
+Projeto em desenvolvimento.
+
+---
+
+## 📜 Licença
+
+Este projeto está licenciado sob a [GNU Affero General Public License v3.0](./LICENSE).
