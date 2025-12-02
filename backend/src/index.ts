@@ -36,8 +36,6 @@ export const App = new Elysia()
 				}))
 			)
 
-			console.log('Env', Bun.env.GEMINI_API_KEY)
-
 			parts.push({
 				text: `Analise estas capturas de tela de materiais de estudo (slides, notas, etc).
                Estime quanto tempo (em minutos) um estudante levaria para estudar esse material profundamente.
