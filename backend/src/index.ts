@@ -1,6 +1,6 @@
 import { Elysia, t } from 'elysia'
 import { cors } from '@elysiajs/cors'
-import { GoogleGenAI, Part, Type } from '@google/genai'
+import { GoogleGenAI, type Part, Type } from '@google/genai'
 import { openapi } from '@elysiajs/openapi'
 import { Value } from '@sinclair/typebox/value'
 
