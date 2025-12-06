@@ -7,17 +7,17 @@ import { LessonRoutes } from './modules/lessons'
 import { ResponseError } from './errors/ResponseError'
 
 export const App = new Elysia()
-	.use(ip())
+	.use(ip({ headersOnly: true }))
 	.use(cors())
 	.use(openapi())
 	.error({ ResponseError })
 
 	.onBeforeHandle(async ({ ip }) => {
-		console.log(`📡 Request from IP: ${ip}`)
-
 		if (await isIpRateLimited(ip)) {
 			console.log(`❌ Rate limit exceeded for IP: ${ip}`)
 			throw new ResponseError({ statusCode: 429 }).toResponse()
+		} else {
+			console.log(`📡 Request from IP: ${ip}`)
 		}
 	})
 
