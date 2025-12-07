@@ -12,7 +12,7 @@ export const App = new Elysia()
 	.use(openapi())
 	.error({ ResponseError })
 
-	.onBeforeHandle(async ({ ip }) => {
+	.onBeforeHandle(async ({ ip = '127.0.0.1' }) => {
 		if (await isIpRateLimited(ip)) {
 			console.log(`❌ Rate limit exceeded for IP: ${ip}`)
 			throw new ResponseError({ statusCode: 429 }).toResponse()

@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { type LessonData, ScreenStage } from './types'
 import StartScreen from './components/screens/StartScreen'
 import UploadScreen from './components/screens/UploadScreen'
-import ProcessingScreen from './components/screens/ProcessingScreen'
 import SetupScreen from './components/screens/SetupScreen'
 import PomodoroScreen from './components/screens/PomodoroScreen'
 
@@ -16,7 +15,6 @@ function App() {
 		[ScreenStage.WELCOME]: <StartScreen onStart={() => setStage(ScreenStage.UPLOAD)} />,
 		[ScreenStage.UPLOAD]: (
 			<UploadScreen
-				onProcessing={isProcessing => setStage(isProcessing ? ScreenStage.PROCESSING : ScreenStage.UPLOAD)}
 				onNextStage={data => {
 					setStage(ScreenStage.SETUP)
 					setLessonData(data)
@@ -25,7 +23,6 @@ function App() {
 				onBackStage={() => setStage(ScreenStage.WELCOME)}
 			/>
 		),
-		[ScreenStage.PROCESSING]: <ProcessingScreen />,
 		[ScreenStage.SETUP]: (
 			<SetupScreen
 				lessonData={lessonData!}

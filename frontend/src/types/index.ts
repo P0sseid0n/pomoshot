@@ -13,8 +13,7 @@ export interface PomodoroSession {
 export const ScreenStage = {
 	WELCOME: 0,
 	UPLOAD: 1,
-	PROCESSING: 2,
-	SETUP: 3,
-	POMODORO: 4,
+	SETUP: 2,
+	POMODORO: 3,
 } as const
 export type ScreenStage = (typeof ScreenStage)[keyof typeof ScreenStage]

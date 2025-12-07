@@ -5,14 +5,13 @@ import Logo from '../ui/Logo'
 import UploadIcon from '../icons/Upload'
 import { Client } from '../../api'
 import Footer from '../ui/Footer'
+import { CloseIcon } from '../icons/Close'
 
 export default function UploadScreen({
-	onProcessing,
 	onNextStage,
 	onBackStage,
 	onReset,
 }: {
-	onProcessing: (isProcessing: boolean) => void
 	onNextStage: (data: Treaty.Data<typeof Client.lessons.extract.post>) => void
 	onBackStage: () => void
 	onReset: () => void
@@ -23,7 +22,7 @@ export default function UploadScreen({
 	const [isDragging, setIsDragging] = useState(false)
 	const [isProcessing, setIsProcessing] = useState(false)
 
-	const [error, setError] = useState<string>()
+	const [errorDisplay, setErrorDisplay] = useState<string>()
 
 	const processFiles = (selectedFiles: File[]) => {
 		setFiles(prev => [...prev, ...selectedFiles])
@@ -61,30 +60,49 @@ export default function UploadScreen({
 			const droppedFiles = Array.from(e.dataTransfer.files).filter(file => file.type.startsWith('image/'))
 
 			if (droppedFiles.length > 0) processFiles(droppedFiles)
-			else setError('apenas arquivos de imagem são permitidos.')
+			else setErrorDisplay('apenas arquivos de imagem são permitidos.')
+		}
+	}
+
+	const getErrorMessage = (error: unknown): string | undefined => {
+		const isObject = (obj: unknown): obj is Record<string, unknown> => typeof obj === 'object' && obj !== null
+
+		if (typeof error === 'string') {
+			console.log('string error:', error)
+			return error
+		} else if (isObject(error) && 'value' in error) {
+			console.log('error with value property:')
+			console.log(error)
+			if (typeof error.value === 'string') {
+				console.log('string value error:', error.value)
+				return error.value
+			} else if (isObject(error.value) && 'message' in error.value) {
+				console.log('object value message error:', error.value.message)
+				return String(error.value.message)
+			}
+		} else if (error instanceof Error) {
+			console.log('Error instance:', error)
+			return error.message
 		}
 	}
 
 	const handleImportLessons = async () => {
-		if (files.length === 0) return
+		if (files.length === 0) {
+			return setErrorDisplay('adicione pelo menos uma captura de tela para continuar.')
+		}
+
+		setErrorDisplay(undefined)
+		setIsProcessing(true)
 
 		try {
-			setIsProcessing(true)
-			onProcessing(true)
 			const { data, error } = await Client.lessons.extract.post({ images: files })
-
-			if (error) {
-				onProcessing(false)
-				return setError(String(error.value) || 'erro no processamento das aulas. Tente novamente.')
-			}
-
+			if (error) throw error
 			onNextStage(data)
 		} catch (error) {
-			console.error('Erro ao importar aulas:', error)
-			onProcessing(false)
-			setError('erro no processamento das aulas. Tente novamente.')
-		} finally {
 			setIsProcessing(false)
+
+			console.error('Erro ao importar aulas:', error)
+			setErrorDisplay(getErrorMessage(error) ?? 'ocorreu um erro ao importar as aulas')
 		}
 	}
 
@@ -154,7 +172,7 @@ export default function UploadScreen({
 				</div>
 
 				{filePreviews.length > 0 && (
-					<div className="flex flex-row flex-wrap gap-4 justify-center mb-4">
+					<div className="flex flex-row flex-wrap gap-4 justify-center mb-8">
 						{filePreviews.map((preview, index) => (
 							<div className="aspect-video max-h-24 rounded-xl overflow-hidden relative group" key={index}>
 								<div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors"></div>
@@ -162,22 +180,12 @@ export default function UploadScreen({
 									type="button"
 									title="Remover imagem"
 									onClick={() => handleRemoveFile(index)}
-									className="absolute top-2 right-2 w-6 h-6 rounded-full bg-white/90 text-neutral-500 hover:text-red-500 flex items-center justify-center shadow-sm opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+									className={
+										'absolute top-2 right-2 w-6 h-6 rounded-full bg-white/90 text-neutral-500 hover:text-red-500 flex items-center justify-center shadow-sm opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer' +
+										(isProcessing ? ' pointer-events-none opacity-50' : '')
+									}
 								>
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										width="14"
-										height="14"
-										viewBox="0 0 24 24"
-										fill="none"
-										stroke="currentColor"
-										strokeWidth="2"
-										strokeLinecap="round"
-										strokeLinejoin="round"
-									>
-										<line x1="18" y1="6" x2="6" y2="18"></line>
-										<line x1="6" y1="6" x2="18" y2="18"></line>
-									</svg>
+									<CloseIcon />
 								</button>
 
 								<img key={index} src={preview} alt={`Preview ${index + 1}`} className="object-cover size-full" />
@@ -186,7 +194,9 @@ export default function UploadScreen({
 					</div>
 				)}
 
-				{error && <p className="text-red-500 text-sm mt-4 text-center bg-red-50 p-3 rounded-lg w-full max-w-md">{error}</p>}
+				{errorDisplay && (
+					<p className="text-red-500 text-sm mt-4 text-center bg-red-50 p-3 rounded-lg w-full max-w-md">{errorDisplay}</p>
+				)}
 
 				<div className="flex flex-row gap-8 mt-4">
 					<Button variant="ghost" onClick={onBackStage}>
