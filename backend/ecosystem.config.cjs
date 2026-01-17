@@ -1,7 +1,7 @@
 module.exports = {
 	apps: [
 		{
-			name: 'backend',
+			name: 'pomoshot-backend',
 			script: 'bun',
 			args: 'run src/index.ts',
 			interpreter: 'none',

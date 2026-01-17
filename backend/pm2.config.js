@@ -1,5 +1,5 @@
 module.exports = {
-	name: 'backend',
+	name: 'pomoshot-backend',
 	script: 'src/index.ts',
 	interpreter: 'bun',
 	env: {
