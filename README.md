@@ -3,7 +3,7 @@
 Transforme suas capturas de tela em um plano de estudo Pomodoro estruturado com IA.
 
 <div align="center">
-  <img src="./screenshot.jpeg" alt="Screenshot da tela inicial" width="600" />
+  <img src="./screenshot.jpeg" alt="Screenshot da tela inicial" width="640" />
 </div>
 
 ---
@@ -36,16 +36,16 @@ O projeto utiliza **Bun Workspaces**, dividido em dois pacotes:
 
 ### **Frontend**
 
--  React
--  TypeScript
--  Tailwind CSS
+- React
+- TypeScript
+- Tailwind CSS
 
 ### **Backend**
 
--  Bun
--  Elysia
--  Eden Treaty
--  Google GenAI
+- Bun
+- Elysia
+- Eden Treaty
+- Google GenAI
 
 ---
 
@@ -88,12 +88,12 @@ bun dev --filter '@pomoshot/frontend'
 
 Funcionalidades planejadas:
 
--  [ ] Salvar progresso e retomar sessões
--  [ ] Notificações sonoras ao final de cada bloco
--  [ ] Modo escuro
--  [ ] Modo totalmente offline
--  [ ] Histórico de estudos
--  [ ] Compartilhamento do plano
+- [ ] Salvar progresso e retomar sessões
+- [ ] Notificações sonoras ao final de cada bloco
+- [ ] Modo escuro
+- [ ] Modo totalmente offline
+- [ ] Histórico de estudos
+- [ ] Compartilhamento do plano
 
 ---
 
