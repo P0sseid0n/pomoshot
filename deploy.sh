@@ -2,10 +2,6 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-export APP_DIR="$SCRIPT_DIR/"
-
-export BUN_INSTALL="$HOME/.bun"
-export PATH="$BUN_INSTALL/bin:$PATH"
 
 cd "$SCRIPT_DIR"
 git pull
