@@ -1,11 +1,11 @@
 import { Elysia } from 'elysia'
 import { Value } from '@sinclair/typebox/value'
-import { fileToBase64 } from '@/utils'
-import { gemini } from '@/lib/gemini'
+import { fileToBase64 } from '../../utils'
+import { gemini } from '../../lib/gemini'
 import * as Model from './model'
 import type { Part } from '@google/genai'
 import { Type } from '@google/genai'
-import { ResponseError } from '@/errors/ResponseError'
+import { ResponseError } from '../../errors/ResponseError'
 
 export const LessonRoutes = new Elysia({ prefix: '/lessons' }).post(
 	'/extract',

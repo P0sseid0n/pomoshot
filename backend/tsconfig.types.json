@@ -1,0 +1,16 @@
+{
+	"compilerOptions": {
+		"declaration": true,
+		"emitDeclarationOnly": true,
+		"outDir": "dist-types",
+		"skipLibCheck": true,
+		"forceConsistentCasingInFileNames": true,
+		"strict": true,
+		"module": "ESNext",
+		"moduleResolution": "Bundler",
+		"target": "ESNext",
+		"allowImportingTsExtensions": true,
+		"noEmit": false
+	},
+	"include": ["src"]
+}
