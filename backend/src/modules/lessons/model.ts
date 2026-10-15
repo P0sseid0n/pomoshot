@@ -6,6 +6,8 @@ export const LessonExtractResponse = t.Object({
 	lessons: t.Array(t.String()),
 })
 
+export const LessonExtractAIResponse = t.Composite([t.Object({ isStudyMaterial: t.Boolean() }), LessonExtractResponse])
+
 export const LessonExtractBody = t.Object({
 	images: t.Files(),
 })

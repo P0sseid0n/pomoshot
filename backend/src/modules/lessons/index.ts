@@ -26,6 +26,9 @@ export const LessonRoutes = new Elysia({ prefix: '/lessons' }).use(ipPlugin({ he
 
 		parts.push({
 			text: `Analise estas capturas de tela de materiais de estudo (slides, notas, etc).
+               Primeiro, verifique se as imagens realmente contêm material de estudo (slides, anotações, livros, exercícios, aulas, etc).
+               Se nenhuma imagem tiver conteúdo de estudo, defina isStudyMaterial como false e preencha os demais campos com valores vazios.
+               Caso contrário, defina isStudyMaterial como true.
                Estime quanto tempo (em minutos) um estudante levaria para estudar esse material profundamente.
                Identifique o assunto principal e uma lista simplificada dos tópicos cobertos.
                Seja realista na estimativa de tempo.`,
@@ -43,6 +46,10 @@ export const LessonRoutes = new Elysia({ prefix: '/lessons' }).use(ipPlugin({ he
 					responseJsonSchema: {
 						type: Type.OBJECT,
 						properties: {
+							isStudyMaterial: {
+								type: Type.BOOLEAN,
+								description: 'Se as imagens contêm material de estudo',
+							},
 							totalMinutes: { type: Type.NUMBER, description: 'Tempo total estimado em minutos' },
 							title: { type: Type.STRING, description: 'O título ou matéria principal do conteúdo' },
 							lessons: {
@@ -51,7 +58,7 @@ export const LessonRoutes = new Elysia({ prefix: '/lessons' }).use(ipPlugin({ he
 								description: 'Lista de tópicos principais ou titulos das aulas',
 							},
 						},
-						required: ['totalMinutes', 'title', 'lessons'],
+						required: ['isStudyMaterial', 'totalMinutes', 'title', 'lessons'],
 					},
 				},
 			})
@@ -66,9 +73,18 @@ export const LessonRoutes = new Elysia({ prefix: '/lessons' }).use(ipPlugin({ he
 
 			let parsed: LessonExtractResponse
 			try {
-				parsed = Value.Parse(Model.LessonExtractResponse, json)
+				const { isStudyMaterial, ...rest } = Value.Parse(Model.LessonExtractAIResponse, json)
+
+				if (!isStudyMaterial) {
+					console.log('❌ Imagens não contêm material de estudo')
+					throw new ResponseError({ error: 'não encontramos conteúdo de estudo nessas imagens', statusCode: 422 })
+				}
+
+				parsed = rest
 				console.log('✅ Resposta validada.')
-			} catch {
+			} catch (error) {
+				if (error instanceof ResponseError) throw error
+
 				console.log('❌ Resposta inválida da IA')
 				throw new ResponseError({ error: 'Resposta inválida da IA' })
 			}

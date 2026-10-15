@@ -72,6 +72,7 @@ export default function UploadScreen({
 		if (typeof error === 'string') return error
 		if (isObject(error) && 'value' in error) {
 			if (typeof error.value === 'string') return error.value
+			if (isObject(error.value) && 'error' in error.value) return String(error.value.error)
 			if (isObject(error.value) && 'message' in error.value) return String(error.value.message)
 		}
 		if (error instanceof Error) return error.message
