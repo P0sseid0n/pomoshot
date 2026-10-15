@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import type { LessonData } from '../../types'
 import { generateSessionsData } from '../../utils'
+import { clearSession, updateSessionProgress, type PomodoroProgress } from '../../utils/session'
 import ArrowRightIcon from '../icons/ArrowRight'
 import PauseIcon from '../icons/Pause'
 import PlayIcon from '../icons/Play'
@@ -18,11 +19,13 @@ export default function PomodoroScreen({
 	lessonData,
 	focoDuration,
 	breakDuration,
+	initialProgress,
 	onReset,
 }: {
 	lessonData: LessonData
 	focoDuration: number
 	breakDuration: number
+	initialProgress?: PomodoroProgress
 	onReset: () => void
 }) {
 	const sessions = useMemo(
@@ -35,9 +38,17 @@ export default function PomodoroScreen({
 		[focoDuration, breakDuration, lessonData],
 	)
 
-	const [timeLeft, setTimeLeft] = useState(sessions[0].duration * 60)
+	const [initialIndex] = useState(() => {
+		const index = initialProgress?.currentSessionIndex ?? 0
+		return Number.isInteger(index) && index >= 0 && index < sessions.length ? index : 0
+	})
+	const [timeLeft, setTimeLeft] = useState(() => {
+		const maxTime = sessions[initialIndex].duration * 60
+		const saved = initialProgress?.currentSessionIndex === initialIndex ? initialProgress.timeLeft : maxTime
+		return Math.min(Math.max(Math.floor(saved), 0), maxTime)
+	})
 
-	const [currentSessionIndex, setCurrentSessionIndex] = useState(0)
+	const [currentSessionIndex, setCurrentSessionIndex] = useState(initialIndex)
 	const currentSession = sessions[currentSessionIndex]
 	const nextSession = sessions[currentSessionIndex + 1]
 	const [isTimerRunning, setIsTimerRunning] = useState(false)
@@ -71,6 +82,11 @@ export default function PomodoroScreen({
 
 		return () => clearTimeout(timeout)
 	}, [isTimerRunning, timeLeft, handleNextSession])
+
+	useEffect(() => {
+		if (isFinished) clearSession()
+		else updateSessionProgress({ currentSessionIndex, timeLeft })
+	}, [currentSessionIndex, timeLeft, isFinished])
 
 	useEffect(() => {
 		const onKeyDown = (e: KeyboardEvent) => {
