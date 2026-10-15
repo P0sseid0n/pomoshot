@@ -1,15 +1,18 @@
-import { Elysia } from 'elysia'
+import { Type, type Part } from '@google/genai'
 import { Value } from '@sinclair/typebox/value'
-import { fileToBase64 } from '../../utils'
-import { gemini } from '../../lib/gemini'
-import * as Model from './model'
-import type { Part } from '@google/genai'
-import { Type } from '@google/genai'
-import { ResponseError } from '../../errors/ResponseError'
+import { Elysia } from 'elysia'
+import { ip as ipPlugin } from 'elysia-ip'
 
-export const LessonRoutes = new Elysia({ prefix: '/lessons' }).post(
+import { ResponseError } from '../../errors/ResponseError'
+import { gemini } from '../../lib/gemini'
+import { setCachedPomo } from '../../services/redis'
+import type { LessonExtractResponse } from '../../types'
+import { fileToBase64 } from '../../utils'
+import * as Model from './model'
+
+export const LessonRoutes = new Elysia({ prefix: '/lessons' }).use(ipPlugin({ headersOnly: true })).post(
 	'/extract',
-	async ({ body, status }) => {
+	async ({ body, status, ip }) => {
 		console.log(`🚀 ${body.images.length} Arquivos recebidos`)
 
 		const parts: Part[] = await Promise.all(
@@ -18,7 +21,7 @@ export const LessonRoutes = new Elysia({ prefix: '/lessons' }).post(
 					mimeType: file.type,
 					data: await fileToBase64(file),
 				},
-			}))
+			})),
 		)
 
 		parts.push({
@@ -61,21 +64,26 @@ export const LessonRoutes = new Elysia({ prefix: '/lessons' }).post(
 
 			const json = JSON.parse(response.text)
 
-			if (!Value.Check(Model.LessonExtractResponse, json)) {
+			let parsed: LessonExtractResponse
+			try {
+				parsed = Value.Parse(Model.LessonExtractResponse, json)
+				console.log('✅ Resposta validada.')
+			} catch {
 				console.log('❌ Resposta inválida da IA')
 				throw new ResponseError({ error: 'Resposta inválida da IA' })
 			}
 
-			const parsed = Value.Cast(Model.LessonExtractResponse, json)
-			console.log('✅ Resposta validada e convertida.')
+			await setCachedPomo(ip || '127.0.0.1', { ...parsed, cachedAt: Date.now(), lastLesson: null })
 
 			return status(200, parsed)
 		} catch (error) {
+			if (error instanceof ResponseError) throw error.toResponse()
+
 			console.error('Erro ao gerar conteúdo:', error)
 			throw new ResponseError({ error: 'Erro ao processar os arquivos', details: String(error), statusCode: 500 }).toResponse()
 		}
 	},
 	{
 		body: Model.LessonExtractBody,
-	}
+	},
 )

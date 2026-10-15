@@ -14,7 +14,7 @@ export class ResponseError extends Error {
 			},
 			{
 				status: this.errorBody.statusCode,
-			}
+			},
 		)
 	}
 }
