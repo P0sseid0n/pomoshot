@@ -6,7 +6,7 @@ import { ip } from 'elysia-ip'
 import { ResponseError } from './errors/ResponseError'
 import { logger, requestLogger } from './lib/logger'
 import { LessonRoutes } from './modules/lessons'
-import { getCachedPomo } from './services/redis'
+import { getRateLimitTtl } from './services/redis'
 
 export const App = new Elysia()
 	.use(ip({ headersOnly: true }))
@@ -18,9 +18,14 @@ export const App = new Elysia()
 	.onBeforeHandle(async ({ ip }) => {
 		ip ||= '127.0.0.1'
 
-		if (await getCachedPomo(ip)) {
-			logger.warn({ ip }, 'rate limit excedido')
-			throw new ResponseError({ statusCode: 429, error: 'Rate limit exceeded' }).toResponse()
+		const retryAfter = await getRateLimitTtl(ip)
+		if (retryAfter !== null) {
+			logger.warn({ ip, retryAfter }, 'rate limit excedido')
+			throw new ResponseError({
+				statusCode: 429,
+				error: 'você já gerou um pomodoro na última hora. tente novamente mais tarde.',
+				retryAfter,
+			}).toResponse()
 		}
 	})
 

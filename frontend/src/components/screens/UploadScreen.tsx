@@ -73,6 +73,11 @@ export default function UploadScreen({
 		const isObject = (obj: unknown): obj is Record<string, unknown> => typeof obj === 'object' && obj !== null
 
 		if (typeof error === 'string') return error
+		if (isObject(error) && error.status === 429) {
+			const retryAfter = isObject(error.value) ? Number(error.value.retryAfter) : NaN
+			const when = retryAfter > 0 ? `em ${Math.ceil(retryAfter / 60)} min` : 'mais tarde'
+			return `você já gerou um pomodoro na última hora. tente novamente ${when}.`
+		}
 		if (isObject(error) && 'value' in error) {
 			if (typeof error.value === 'string') return error.value
 			if (isObject(error.value) && 'error' in error.value) return String(error.value.error)
