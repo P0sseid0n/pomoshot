@@ -1,10 +1,14 @@
 export default function Footer() {
 	return (
-		<footer>
-			<p className="text-neutral-400 text-md space-x-1">
-				<span>&copy; 2025 Pomoshot.</span>
-				<span className="ml-2">made by</span>
-				<a href="" className="font-medium">
+		<footer className="w-full flex justify-center pt-4">
+			<p className="text-ink-faint text-sm">
+				&copy; {new Date().getFullYear()} pomoshot · feito por{' '}
+				<a
+					href="https://p0sseid0n.dev/"
+					target="_blank"
+					rel="noreferrer"
+					className="font-medium text-ink-muted underline decoration-line underline-offset-4 transition-colors hover:text-ink hover:decoration-accent rounded-sm"
+				>
 					P0sseid0n
 				</a>
 			</p>

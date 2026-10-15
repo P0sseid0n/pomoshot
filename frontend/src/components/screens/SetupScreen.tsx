@@ -1,20 +1,32 @@
-import { Fragment, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
+
 import type { LessonData } from '../../types'
-import Footer from '../ui/Footer'
-import Logo from '../ui/Logo'
-import Button from '../ui/Button'
 import { generateSessionsData } from '../../utils'
+import ArrowRightIcon from '../icons/ArrowRight'
+import Button from '../ui/Button'
+import Footer from '../ui/Footer'
+import Header from '../ui/Header'
+import Segmented from '../ui/Segmented'
 
 const FOCO_DURATIONS = [5, 10, 20]
 const BREAK_DURATIONS = [5, 10, 20]
 
+const formatMinutes = (total: number) => {
+	const hours = Math.floor(total / 60)
+	const minutes = total % 60
+	if (!hours) return `${minutes}m`
+	return `${hours}h ${minutes.toString().padStart(2, '0')}m`
+}
+
 export default function SetupScreen({
 	lessonData,
 	onStartSession,
+	onBackStage,
 	onReset,
 }: {
 	lessonData: LessonData
 	onStartSession: (focoDuration: number, breakDuration: number) => void
+	onBackStage: () => void
 	onReset: () => void
 }) {
 	const [focoDuration, setFocoDuration] = useState(FOCO_DURATIONS[0])
@@ -27,114 +39,115 @@ export default function SetupScreen({
 				breakDuration,
 				lessonData,
 			}),
-		[focoDuration, breakDuration, lessonData]
+		[focoDuration, breakDuration, lessonData],
 	)
 
 	const totalWallTime = proposedSessions.reduce((acc, s) => acc + s.duration, 0)
-
-	const estimated = {
-		hours: Math.floor(lessonData.totalMinutes / 60),
-		minutes: lessonData.totalMinutes % 60,
-	}
+	const focusCount = proposedSessions.filter(s => s.type === 'focus').length
+	const breakCount = proposedSessions.length - focusCount
 
 	return (
-		<div className="flex flex-col items-center justify-between w-full h-full p-6 space-y-8">
-			<header className="flex flex-row justify-between w-full">
-				<Logo className="text-2xl" onClick={onReset} />
+		<>
+			<Header onReset={onReset} />
 
-				<div>{/* Perfil */}</div>
-			</header>
+			<main className="flex-1 grid md:grid-cols-[1.15fr_1fr] gap-10 md:gap-14 py-12 md:py-16 items-start">
+				<section aria-labelledby="lesson-title" className="animate-rise">
+					<p className="text-sm font-medium text-accent mb-3">assunto identificado</p>
+					<h2 id="lesson-title" className="text-3xl md:text-4xl font-semibold tracking-[-0.03em] leading-[1.1]">
+						{lessonData.title.toLowerCase()}
+					</h2>
+					<p className="mt-4 text-ink-muted">
+						<span className="font-mono text-ink">{formatMinutes(lessonData.totalMinutes)}</span> de aula em{' '}
+						<span className="font-mono text-ink">{lessonData.lessons.length}</span>{' '}
+						{lessonData.lessons.length === 1 ? 'tópico' : 'tópicos'}
+					</p>
 
-			<main className="flex flex-col items-center">
-				<div className="w-full bg-white rounded-3xl p-8 shadow-sm border border-neutral-100 mb-8 mt-12 md:mt-0">
-					<div className="flex items-start justify-between mb-6 gap-x-[2%]">
-						<div>
-							<p className="text-xs font-bold tracking-wider text-red-500 mb-1">assunto identificado</p>
-							<h2 className="text-2xl font-semibold text-neutral-900">{lessonData.title.toLowerCase()}</h2>
-						</div>
-						<div className="text-right">
-							<p className="text-xs font-bold tracking-wider text-neutral-400 mb-1">tempo de aulas</p>
-							<p className="text-2xl font-medium text-neutral-900 whitespace-nowrap">
-								{estimated.hours}h {estimated.minutes}m
-							</p>
-						</div>
-					</div>
-
-					<div className="space-y-2 mb-2">
+					<ol className="mt-8 border-t border-line">
 						{lessonData.lessons.map((lesson, idx) => (
-							<div key={idx} className="flex items-center gap-2 text-sm text-neutral-600">
-								<div className="size-1.5 rounded-full bg-neutral-300"></div>
-								{lesson.toLowerCase()}
-							</div>
+							<li key={idx} className="flex items-baseline gap-4 py-3 border-b border-line text-[0.9375rem]">
+								<span className="font-mono text-xs text-ink-faint w-5 shrink-0">{String(idx + 1).padStart(2, '0')}</span>
+								<span className="text-ink">{lesson.toLowerCase()}</span>
+							</li>
 						))}
-					</div>
-				</div>
+					</ol>
+				</section>
 
-				<div className="w-full mb-16 mt-4">
-					<h3 className="text-lg font-medium text-neutral-900 mb-6">configurar blocos</h3>
+				<section
+					aria-labelledby="config-title"
+					className="md:sticky md:top-8 bg-surface rounded-[28px] p-6 md:p-7 shadow-[0_1px_2px_rgb(var(--shadow)/0.04),0_24px_48px_-24px_rgb(var(--shadow)/0.18)] animate-rise stagger-1"
+				>
+					<h3 id="config-title" className="text-lg font-semibold tracking-[-0.01em] mb-6">
+						configurar blocos
+					</h3>
 
-					<div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-						<div>
-							<label className="block text-xs font-medium text-neutral-500 uppercase mb-3">foco (min)</label>
-							<div className="flex gap-2">
-								{FOCO_DURATIONS.map(val => (
-									<button
-										type="button"
-										key={val}
-										onClick={() => setFocoDuration(val)}
-										className={`flex-1 py-3 rounded-xl text-sm font-medium transition-all cursor-pointer ${
-											focoDuration === val
-												? 'bg-neutral-900 text-white shadow-md'
-												: 'bg-white text-neutral-600 border border-neutral-200 hover:border-neutral-300'
-										}`}
-									>
-										{val}m
-									</button>
-								))}
-							</div>
-						</div>
-						<div>
-							<label className="block text-xs font-medium text-neutral-500 uppercase mb-3">pausa (min)</label>
-							<div className="flex gap-2">
-								{BREAK_DURATIONS.map(val => (
-									<button
-										type="button"
-										key={val}
-										onClick={() => setBreakDuration(val)}
-										className={`flex-1 py-3 rounded-xl text-sm font-medium transition-all cursor-pointer ${
-											breakDuration === val
-												? 'bg-neutral-900 text-white shadow-md'
-												: 'bg-white text-neutral-600 border border-neutral-200 hover:border-neutral-300'
-										}`}
-									>
-										{val}m
-									</button>
-								))}
-							</div>
-						</div>
+					<div className="space-y-5">
+						<Segmented
+							label="foco"
+							options={FOCO_DURATIONS}
+							value={focoDuration}
+							onChange={setFocoDuration}
+							format={v => `${v} min`}
+						/>
+						<Segmented
+							label="pausa"
+							options={BREAK_DURATIONS}
+							value={breakDuration}
+							onChange={setBreakDuration}
+							format={v => `${v} min`}
+						/>
 					</div>
-					<div className="p-5 bg-neutral-100 rounded-2xl">
-						<div className="flex justify-between items-center mb-2">
-							<span className="text-xs font-bold text-neutral-400 uppercase tracking-wider">pré-visualização</span>
-							<span className="text-xs text-neutral-400">tempo total de sessão: {totalWallTime} min</span>
+
+					<div className="mt-8">
+						<div className="flex items-baseline justify-between mb-3">
+							<span className="text-sm font-medium text-ink-muted">sessão</span>
+							<span className="font-mono text-2xl font-medium tracking-tight">{formatMinutes(totalWallTime)}</span>
 						</div>
-						<div className="flex flex-wrap items-center gap-2 text-lg">
-							{proposedSessions.map((session, i) => (
-								<Fragment key={i}>
-									<span className={`font-medium ${session.type === 'focus' ? 'text-neutral-900' : 'text-red-500'}`}>
-										{session.duration}
-									</span>
-									{i < proposedSessions.length - 1 && <span className="text-neutral-300 text-sm">+</span>}
-								</Fragment>
+
+						<div
+							role="img"
+							aria-label={`${focusCount} blocos de foco e ${breakCount} pausas, total de ${totalWallTime} minutos`}
+							className="flex gap-[3px] h-2"
+						>
+							{proposedSessions.map(session => (
+								<span
+									key={session.id}
+									style={{ flexGrow: session.duration }}
+									className={`basis-0 rounded-[3px] transition-[flex-grow] duration-500 ease-out-soft ${
+										session.type === 'focus' ? 'bg-ink' : 'bg-accent'
+									}`}
+								/>
 							))}
 						</div>
-					</div>
-				</div>
 
-				<Button onClick={() => onStartSession(focoDuration, breakDuration)}>gerar pomodoro</Button>
+						<div className="flex gap-5 mt-3 text-xs text-ink-muted">
+							<span className="flex items-center gap-1.5">
+								<span className="size-2 rounded-full bg-ink" />
+								{focusCount} foco
+							</span>
+							<span className="flex items-center gap-1.5">
+								<span className="size-2 rounded-full bg-accent" />
+								{breakCount} {breakCount === 1 ? 'pausa' : 'pausas'}
+							</span>
+						</div>
+					</div>
+
+					<Button onClick={() => onStartSession(focoDuration, breakDuration)} className="group w-full mt-8">
+						gerar pomodoro
+						<span className="transition-transform duration-300 ease-spring group-hover:translate-x-0.5">
+							<ArrowRightIcon />
+						</span>
+					</Button>
+					<button
+						type="button"
+						onClick={onBackStage}
+						className="w-full mt-3 h-10 rounded-full text-sm text-ink-muted hover:text-ink transition-colors cursor-pointer"
+					>
+						enviar outras capturas
+					</button>
+				</section>
 			</main>
 
 			<Footer />
-		</div>
+		</>
 	)
 }

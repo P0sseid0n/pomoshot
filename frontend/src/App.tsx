@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { type LessonData, ScreenStage } from './types'
+
+import PomodoroScreen from './components/screens/PomodoroScreen'
+import SetupScreen from './components/screens/SetupScreen'
 import StartScreen from './components/screens/StartScreen'
 import UploadScreen from './components/screens/UploadScreen'
-import SetupScreen from './components/screens/SetupScreen'
-import PomodoroScreen from './components/screens/PomodoroScreen'
+import { ScreenStage, type LessonData } from './types'
 
 function App() {
 	const [stage, setStage] = useState<ScreenStage>(ScreenStage.WELCOME)
@@ -31,6 +32,7 @@ function App() {
 					setBreakDuration(breakDuration)
 					setStage(ScreenStage.POMODORO)
 				}}
+				onBackStage={() => setStage(ScreenStage.UPLOAD)}
 				onReset={() => setStage(ScreenStage.WELCOME)}
 			/>
 		),
@@ -44,7 +46,11 @@ function App() {
 		),
 	}
 
-	return <div className="h-screen max-w-4xl mx-auto">{screens[stage]}</div>
+	return (
+		<div key={stage} className="min-h-dvh max-w-4xl mx-auto px-5 py-5 md:px-8 md:py-6 flex flex-col">
+			{screens[stage]}
+		</div>
+	)
 }
 
 export default App

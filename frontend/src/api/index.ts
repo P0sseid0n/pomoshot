@@ -1,4 +1,5 @@
 import { treaty } from '@elysiajs/eden'
+
 import type { App } from '@pomoshot/backend'
 
 const API_URL = import.meta.env.VITE_API_URL

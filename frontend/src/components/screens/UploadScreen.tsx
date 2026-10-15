@@ -1,11 +1,12 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Treaty } from '@elysiajs/eden'
-import Button from '../ui/Button'
-import Logo from '../ui/Logo'
-import UploadIcon from '../icons/Upload'
+import { useEffect, useMemo, useRef, useState } from 'react'
+
 import { Client } from '../../api'
-import Footer from '../ui/Footer'
 import { CloseIcon } from '../icons/Close'
+import UploadIcon from '../icons/Upload'
+import Button from '../ui/Button'
+import Footer from '../ui/Footer'
+import Header from '../ui/Header'
 
 export default function UploadScreen({
 	onNextStage,
@@ -25,6 +26,7 @@ export default function UploadScreen({
 	const [errorDisplay, setErrorDisplay] = useState<string>()
 
 	const processFiles = (selectedFiles: File[]) => {
+		setErrorDisplay(undefined)
 		setFiles(prev => [...prev, ...selectedFiles])
 	}
 
@@ -42,17 +44,17 @@ export default function UploadScreen({
 		setFiles(prev => prev.filter((_, i) => i !== index))
 	}
 
-	const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+	const handleDragOver = (e: React.DragEvent<HTMLButtonElement>) => {
 		e.preventDefault()
 		setIsDragging(true)
 	}
 
-	const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+	const handleDragLeave = (e: React.DragEvent<HTMLButtonElement>) => {
 		e.preventDefault()
 		setIsDragging(false)
 	}
 
-	const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+	const handleDrop = (e: React.DragEvent<HTMLButtonElement>) => {
 		e.preventDefault()
 		setIsDragging(false)
 
@@ -67,23 +69,12 @@ export default function UploadScreen({
 	const getErrorMessage = (error: unknown): string | undefined => {
 		const isObject = (obj: unknown): obj is Record<string, unknown> => typeof obj === 'object' && obj !== null
 
-		if (typeof error === 'string') {
-			console.log('string error:', error)
-			return error
-		} else if (isObject(error) && 'value' in error) {
-			console.log('error with value property:')
-			console.log(error)
-			if (typeof error.value === 'string') {
-				console.log('string value error:', error.value)
-				return error.value
-			} else if (isObject(error.value) && 'message' in error.value) {
-				console.log('object value message error:', error.value.message)
-				return String(error.value.message)
-			}
-		} else if (error instanceof Error) {
-			console.log('Error instance:', error)
-			return error.message
+		if (typeof error === 'string') return error
+		if (isObject(error) && 'value' in error) {
+			if (typeof error.value === 'string') return error.value
+			if (isObject(error.value) && 'message' in error.value) return String(error.value.message)
 		}
+		if (error instanceof Error) return error.message
 	}
 
 	const handleImportLessons = async () => {
@@ -125,81 +116,99 @@ export default function UploadScreen({
 		window.addEventListener('paste', pasteHandler)
 		return () => window.removeEventListener('paste', pasteHandler)
 	}, [])
+
 	return (
-		<div className="flex flex-col items-center justify-between w-full h-full p-6 space-y-8">
-			<header className="flex flex-row justify-between w-full">
-				<Logo className="text-2xl" onClick={onReset} />
+		<>
+			<Header onReset={onReset} />
 
-				<div>{/* Perfil */}</div>
-			</header>
-
-			<main className="flex flex-col items-center w-xl">
-				<div className="w-full max-w-md text-center mb-8">
-					<h2 className="text-2xl font-medium text-neutral-900 mb-2">envie suas capturas</h2>
-					<p className="text-neutral-500 text-sm">adicione prints dos slides ou material.</p>
+			<main className="flex-1 flex flex-col items-center w-full max-w-lg mx-auto py-12 md:py-16">
+				<div className="w-full mb-8 animate-rise">
+					<h2 className="text-3xl md:text-4xl font-semibold tracking-[-0.03em]">envie suas capturas</h2>
+					<p className="mt-2 text-ink-muted max-w-[44ch]">
+						prints da lista de aulas ou dos slides, com títulos e durações visíveis.
+					</p>
 				</div>
 
-				<div
-					className={`w-full max-w-md border-2 border-dashed rounded-3xl p-8 flex flex-col items-center justify-center cursor-pointer transition-all duration-300 group mb-8 h-40 relative overflow-hidden ${
-						isDragging ? 'border-red-500 bg-red-50 scale-105 shadow-lg' : 'border-neutral-200 hover:border-red-300 bg-white'
-					}`}
+				<input
+					type="file"
+					multiple
+					accept="image/*"
+					className="hidden"
+					ref={fileInputRef}
+					onChange={handleFileChange}
+					aria-label="Enviar capturas de slides"
+					tabIndex={-1}
+				/>
+
+				<button
+					type="button"
+					disabled={isProcessing}
 					onClick={() => fileInputRef.current?.click()}
 					onDragOver={handleDragOver}
 					onDragLeave={handleDragLeave}
 					onDrop={handleDrop}
+					className={`group w-full h-48 rounded-[28px] flex flex-col items-center justify-center gap-3 cursor-pointer transition-[background-color,box-shadow,scale] duration-300 ease-out-soft animate-rise stagger-1 disabled:cursor-not-allowed disabled:opacity-60 ${
+						isDragging
+							? 'bg-accent-soft ring-2 ring-accent scale-[1.015]'
+							: 'bg-surface ring-1 ring-line hover:ring-ink-faint shadow-[0_1px_2px_rgb(var(--shadow)/0.04),0_12px_32px_-16px_rgb(var(--shadow)/0.15)]'
+					}`}
 				>
-					<input
-						type="file"
-						multiple
-						accept="image/*"
-						className="hidden"
-						ref={fileInputRef}
-						onChange={handleFileChange}
-						aria-label="Enviar capturas de slides"
-						title="Enviar capturas de slides"
-					/>
-
-					<div
-						className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-3 transition-colors ${
-							isDragging ? 'bg-red-100 text-red-600' : 'bg-neutral-50 text-neutral-400 group-hover:text-red-500'
+					<span
+						className={`size-12 rounded-2xl flex items-center justify-center transition-[background-color,color,translate] duration-300 ease-spring ${
+							isDragging
+								? 'bg-accent text-paper -translate-y-1'
+								: 'bg-sunken text-ink-muted group-hover:text-accent group-hover:-translate-y-0.5'
 						}`}
 					>
 						<UploadIcon />
-					</div>
-					<p className={`font-medium transition-colors ${isDragging ? 'text-red-700' : 'text-neutral-600'}`}>
-						{isDragging ? 'solte para adicionar' : 'clique ou arraste'}
-					</p>
-				</div>
+					</span>
+					<span className={`font-medium ${isDragging ? 'text-accent-ink' : 'text-ink'}`}>
+						{isDragging ? 'solte para adicionar' : 'clique ou arraste as imagens'}
+					</span>
+					<span className="text-sm text-ink-faint">
+						ou cole com <kbd className="font-mono text-xs px-1.5 py-0.5 rounded-md bg-sunken text-ink-muted">ctrl+v</kbd>
+					</span>
+				</button>
 
 				{filePreviews.length > 0 && (
-					<div className="flex flex-row flex-wrap gap-4 justify-center mb-8">
-						{filePreviews.map((preview, index) => (
-							<div className="aspect-video max-h-24 rounded-xl overflow-hidden relative group" key={index}>
-								<div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors"></div>
-								<button
-									type="button"
-									title="Remover imagem"
-									onClick={() => handleRemoveFile(index)}
-									className={
-										'absolute top-2 right-2 w-6 h-6 rounded-full bg-white/90 text-neutral-500 hover:text-red-500 flex items-center justify-center shadow-sm opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer' +
-										(isProcessing ? ' pointer-events-none opacity-50' : '')
-									}
+					<section aria-label="Imagens selecionadas" className="w-full mt-6">
+						<p className="text-sm text-ink-muted mb-3">
+							<span className="font-mono text-ink">{files.length}</span> {files.length === 1 ? 'imagem' : 'imagens'}
+						</p>
+						<ul className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+							{filePreviews.map((preview, index) => (
+								<li
+									key={preview}
+									className="aspect-video rounded-xl overflow-hidden relative group ring-1 ring-line animate-rise"
 								>
-									<CloseIcon />
-								</button>
-
-								<img key={index} src={preview} alt={`Preview ${index + 1}`} className="object-cover size-full" />
-							</div>
-						))}
-					</div>
+									<img src={preview} alt={`Captura ${index + 1}`} className="object-cover size-full" />
+									<button
+										type="button"
+										aria-label={`Remover captura ${index + 1}`}
+										onClick={() => handleRemoveFile(index)}
+										disabled={isProcessing}
+										className="absolute top-1.5 right-1.5 size-7 rounded-full bg-surface/90 backdrop-blur text-ink-muted hover:text-accent flex items-center justify-center shadow-sm cursor-pointer transition-[opacity,color] opacity-0 group-hover:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100 disabled:pointer-events-none"
+									>
+										<CloseIcon />
+									</button>
+								</li>
+							))}
+						</ul>
+					</section>
 				)}
 
 				{errorDisplay && (
-					<p className="text-red-500 text-sm mt-4 text-center bg-red-50 p-3 rounded-lg w-full max-w-md">{errorDisplay}</p>
+					<p
+						role="alert"
+						className="w-full mt-6 flex gap-2.5 items-start text-sm text-accent-ink bg-accent-soft px-4 py-3 rounded-2xl"
+					>
+						<span aria-hidden className="mt-1.5 size-1.5 shrink-0 rounded-full bg-accent" />
+						{errorDisplay}
+					</p>
 				)}
 
-				<div className="flex flex-row gap-8 mt-4">
-					<Button variant="ghost" onClick={onBackStage}>
+				<div className="w-full flex items-center justify-between gap-4 mt-10">
+					<Button variant="ghost" onClick={onBackStage} disabled={isProcessing}>
 						voltar
 					</Button>
 					<Button variant="primary" onClick={handleImportLessons} disabled={files.length === 0} isLoading={isProcessing}>
@@ -209,6 +218,6 @@ export default function UploadScreen({
 			</main>
 
 			<Footer />
-		</div>
+		</>
 	)
 }

@@ -1,4 +1,5 @@
 import React from 'react'
+
 import Loading from '../icons/Loading'
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -8,21 +9,27 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 
 const Button: React.FC<ButtonProps> = ({ children, variant = 'primary', isLoading = false, className = '', ...props }) => {
 	const baseStyles =
-		'px-6 py-3 rounded-full font-medium transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm tracking-wide cursor-pointer'
+		'inline-flex items-center justify-center gap-2 h-12 px-7 rounded-full font-medium text-[0.9375rem] cursor-pointer select-none transition-[background-color,color,box-shadow,translate,scale] duration-200 ease-out-soft active:scale-[0.97] disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100'
 
 	const variants = {
-		primary: 'bg-neutral-900 text-white hover:bg-neutral-800 focus:ring-neutral-900 shadow-lg shadow-neutral-200',
-		secondary: 'bg-white text-neutral-900 border border-neutral-200 hover:border-neutral-400 focus:ring-neutral-200',
-		ghost: 'bg-transparent text-neutral-500 hover:text-neutral-900',
+		primary:
+			'bg-ink text-paper shadow-[0_1px_0_rgb(255_255_255/0.12)_inset,0_8px_20px_-8px_rgb(var(--shadow)/0.5)] hover:-translate-y-px hover:shadow-[0_1px_0_rgb(255_255_255/0.12)_inset,0_12px_24px_-10px_rgb(var(--shadow)/0.55)] disabled:hover:translate-y-0',
+		secondary: 'bg-surface text-ink ring-1 ring-line hover:ring-ink-faint',
+		ghost: 'px-4 bg-transparent text-ink-muted hover:text-ink hover:bg-sunken',
 	}
 
 	return (
-		<button className={`${baseStyles} ${variants[variant]} ${className}`} disabled={isLoading || props.disabled} {...props}>
+		<button
+			className={`${baseStyles} ${variants[variant]} ${className}`}
+			disabled={isLoading || props.disabled}
+			aria-busy={isLoading || undefined}
+			{...props}
+		>
 			{isLoading ? (
-				<span className="flex items-center justify-center gap-2">
+				<>
 					<Loading />
 					processando
-				</span>
+				</>
 			) : (
 				children
 			)}
