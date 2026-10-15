@@ -1,0 +1,8 @@
+node_modules
+dist
+dist-types
+bun.lock
+*.mp3
+*.jpg
+*.jpeg
+*.png
