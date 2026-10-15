@@ -3,18 +3,23 @@ import { Value } from '@sinclair/typebox/value'
 import { Elysia } from 'elysia'
 import { ip as ipPlugin } from 'elysia-ip'
 
-import { ResponseError } from '../../errors/ResponseError'
+import { ResponseError, ResponseErrorBody } from '../../errors/ResponseError'
 import { gemini } from '../../lib/gemini'
 import { logger } from '../../lib/logger'
 import { setCachedPomo } from '../../services/redis'
 import type { LessonExtractResponse } from '../../types'
 import { fileToBase64 } from '../../utils'
-import { describeImagesError } from './limits'
+import { describeImagesError, MAX_IMAGE_SIZE_MB, MAX_IMAGES, MAX_TOTAL_SIZE_MB } from './limits'
 import * as Model from './model'
 
 export const LessonRoutes = new Elysia({ prefix: '/lessons' })
 	.use(ipPlugin({ headersOnly: true }))
 	.onError(({ code, body }) => {
+		if (code === 'PARSE') {
+			logger.warn('corpo da requisição não é multipart/form-data')
+			return new ResponseError({ error: 'envie as imagens em multipart/form-data, no campo images.', statusCode: 400 }).toResponse()
+		}
+
 		if (code !== 'VALIDATION' && code !== 'INVALID_FILE_TYPE') return
 
 		const images = (body as { images?: unknown } | undefined)?.images
@@ -118,6 +123,26 @@ export const LessonRoutes = new Elysia({ prefix: '/lessons' })
 			}
 		},
 		{
+			parse: 'formdata',
 			body: Model.LessonExtractBody,
+			response: {
+				200: Model.LessonExtractResponse,
+				400: ResponseErrorBody,
+				422: ResponseErrorBody,
+				429: ResponseErrorBody,
+				500: ResponseErrorBody,
+			},
+			detail: {
+				tags: ['lessons'],
+				summary: 'Extrai as aulas das capturas de tela',
+				description: [
+					`Recebe as imagens em \`multipart/form-data\` no campo \`images\` (png, jpeg ou webp; até ${MAX_IMAGES} imagens, ${MAX_IMAGE_SIZE_MB} MB cada e ${MAX_TOTAL_SIZE_MB} MB no total) e devolve o assunto, os tópicos e o tempo estimado de estudo.`,
+					'',
+					'- **400**: o corpo não veio em `multipart/form-data`.',
+					'- **422**: imagens inválidas (tipo, tamanho ou quantidade) ou sem conteúdo de estudo.',
+					'- **429**: o IP já gerou um plano na última hora; `retryAfter` e o header `Retry-After` dizem quantos segundos faltam.',
+					'- **500**: falha na chamada ao Gemini ou resposta da IA fora do schema.',
+				].join('\n'),
+			},
 		},
 	)

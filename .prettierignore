@@ -6,3 +6,4 @@ bun.lock
 *.jpg
 *.jpeg
 *.png
+backend/openapi.json

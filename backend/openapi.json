@@ -1,0 +1,227 @@
+{
+	"openapi": "3.0.3",
+	"info": {
+		"title": "pomoshot API",
+		"description": "Recebe capturas de tela de aulas, usa o Gemini para identificar o assunto, os tópicos e o tempo de estudo, e devolve os dados para montar o plano pomodoro. Cada IP pode gerar um plano por hora.",
+		"version": "1.0.0"
+	},
+	"tags": [
+		{
+			"name": "lessons",
+			"description": "Extração de aulas a partir de imagens"
+		}
+	],
+	"paths": {
+		"/lessons/extract": {
+			"post": {
+				"tags": [
+					"lessons"
+				],
+				"summary": "Extrai as aulas das capturas de tela",
+				"description": "Recebe as imagens em `multipart/form-data` no campo `images` (png, jpeg ou webp; até 20 imagens, 10 MB cada e 20 MB no total) e devolve o assunto, os tópicos e o tempo estimado de estudo.\n\n- **400**: o corpo não veio em `multipart/form-data`.\n- **422**: imagens inválidas (tipo, tamanho ou quantidade) ou sem conteúdo de estudo.\n- **429**: o IP já gerou um plano na última hora; `retryAfter` e o header `Retry-After` dizem quantos segundos faltam.\n- **500**: falha na chamada ao Gemini ou resposta da IA fora do schema.",
+				"requestBody": {
+					"content": {
+						"multipart/form-data": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"images": {
+										"type": "array",
+										"maxSize": "10m",
+										"minItems": 1,
+										"maxItems": 20,
+										"elysiaMeta": "Files",
+										"default": "Files",
+										"extension": [
+											"image/png",
+											"image/jpeg",
+											"image/webp"
+										],
+										"items": {
+											"type": "string",
+											"maxSize": "10m",
+											"minItems": 1,
+											"maxItems": 20,
+											"default": "Files",
+											"format": "binary"
+										}
+									}
+								},
+								"required": [
+									"images"
+								]
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"description": "Response for status 200",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"totalMinutes": {
+											"description": "Tempo total de estudo estimado, em minutos",
+											"type": "number"
+										},
+										"title": {
+											"description": "Assunto principal do material",
+											"type": "string"
+										},
+										"lessons": {
+											"description": "Tópicos ou títulos das aulas, em ordem",
+											"type": "array",
+											"items": {
+												"type": "string"
+											}
+										}
+									},
+									"required": [
+										"totalMinutes",
+										"title",
+										"lessons"
+									]
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Response for status 400",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"error": {
+											"description": "Mensagem do erro, pronta para mostrar ao usuário",
+											"type": "string"
+										},
+										"code": {
+											"description": "Status HTTP",
+											"type": "number"
+										},
+										"details": {
+											"description": "Detalhes técnicos da falha (só em alguns erros 500)",
+											"type": "string"
+										},
+										"retryAfter": {
+											"description": "Segundos até liberar uma nova extração (só no 429)",
+											"type": "number"
+										}
+									},
+									"required": [
+										"error",
+										"code"
+									]
+								}
+							}
+						}
+					},
+					"422": {
+						"description": "Response for status 422",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"error": {
+											"description": "Mensagem do erro, pronta para mostrar ao usuário",
+											"type": "string"
+										},
+										"code": {
+											"description": "Status HTTP",
+											"type": "number"
+										},
+										"details": {
+											"description": "Detalhes técnicos da falha (só em alguns erros 500)",
+											"type": "string"
+										},
+										"retryAfter": {
+											"description": "Segundos até liberar uma nova extração (só no 429)",
+											"type": "number"
+										}
+									},
+									"required": [
+										"error",
+										"code"
+									]
+								}
+							}
+						}
+					},
+					"429": {
+						"description": "Response for status 429",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"error": {
+											"description": "Mensagem do erro, pronta para mostrar ao usuário",
+											"type": "string"
+										},
+										"code": {
+											"description": "Status HTTP",
+											"type": "number"
+										},
+										"details": {
+											"description": "Detalhes técnicos da falha (só em alguns erros 500)",
+											"type": "string"
+										},
+										"retryAfter": {
+											"description": "Segundos até liberar uma nova extração (só no 429)",
+											"type": "number"
+										}
+									},
+									"required": [
+										"error",
+										"code"
+									]
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Response for status 500",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"error": {
+											"description": "Mensagem do erro, pronta para mostrar ao usuário",
+											"type": "string"
+										},
+										"code": {
+											"description": "Status HTTP",
+											"type": "number"
+										},
+										"details": {
+											"description": "Detalhes técnicos da falha (só em alguns erros 500)",
+											"type": "string"
+										},
+										"retryAfter": {
+											"description": "Segundos até liberar uma nova extração (só no 429)",
+											"type": "number"
+										}
+									},
+									"required": [
+										"error",
+										"code"
+									]
+								}
+							}
+						}
+					}
+				},
+				"operationId": "postLessonsExtract"
+			}
+		}
+	},
+	"components": {
+		"schemas": {}
+	}
+}

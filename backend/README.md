@@ -30,7 +30,7 @@ docker compose up -d redis
 bun --filter '@pomoshot/backend' dev
 ```
 
-A API sobe em `http://localhost:3000` e a documentação fica em `http://localhost:3000/openapi`.
+A API sobe em `http://localhost:3000` e a documentação fica em `http://localhost:3000/openapi`. O schema OpenAPI também fica versionado em [`openapi.json`](openapi.json); depois de mudar alguma rota, gere de novo com `bun run openapi`.
 
 ### Variáveis de ambiente
 
@@ -42,12 +42,13 @@ A API sobe em `http://localhost:3000` e a documentação fica em `http://localho
 
 ### Scripts
 
-| Comando         | O que faz                                             |
-| --------------- | ----------------------------------------------------- |
-| `bun dev`       | servidor com recarregamento automático                |
-| `bun run build` | gera o bundle em `dist/`                              |
-| `bun run types` | gera os tipos em `dist-types/` (usados pelo frontend) |
-| `bun start`     | roda o bundle em modo produção                        |
+| Comando           | O que faz                                                            |
+| ----------------- | -------------------------------------------------------------------- |
+| `bun dev`         | servidor com recarregamento automático                               |
+| `bun run build`   | gera o bundle em `dist/`                                             |
+| `bun run types`   | gera os tipos em `dist-types/` (usados pelo frontend)                |
+| `bun start`       | roda o bundle em modo produção                                       |
+| `bun run openapi` | gera `openapi.json` a partir do app (não precisa de Redis nem chave) |
 
 ---
 
@@ -55,14 +56,17 @@ A API sobe em `http://localhost:3000` e a documentação fica em `http://localho
 
 ```
 src/
-├── index.ts                  app Elysia: CORS, OpenAPI e rate limit
+├── app.ts                    app Elysia: CORS, OpenAPI e rate limit
+├── index.ts                  conecta no Redis e sobe o servidor
 ├── modules/lessons/
 │   ├── index.ts              rota POST /lessons/extract
+│   ├── limits.ts             limites de tipo, tamanho e quantidade das imagens
 │   └── model.ts              schemas do body e da resposta
 ├── services/redis.ts         leitura e escrita do cache por IP
 ├── lib/
 │   ├── gemini.ts             cliente do Gemini
-│   └── redis.ts              cliente do Redis (conecta na inicialização)
+│   ├── logger.ts             logger (pino) e log das requisições
+│   └── redis.ts              cliente do Redis (conectado pelo index.ts)
 ├── errors/ResponseError.ts   erro padronizado da API
 ├── types/                    tipos compartilhados
 └── utils/                    helpers (ex.: arquivo → base64)
@@ -74,7 +78,7 @@ src/
 
 ### `POST /lessons/extract`
 
-Recebe as imagens em `multipart/form-data`, no campo `images` (um ou mais arquivos).
+Recebe as imagens em `multipart/form-data`, no campo `images`: de 1 a 20 arquivos png, jpeg ou webp, até 10 MB cada e 20 MB no total.
 
 ```sh
 curl -F "images=@aula1.png" -F "images=@aula2.png" http://localhost:3000/lessons/extract
@@ -93,15 +97,17 @@ curl -F "images=@aula1.png" -F "images=@aula2.png" http://localhost:3000/lessons
 **Erros** seguem sempre o mesmo formato:
 
 ```json
-{ "error": "Rate limit exceeded", "code": 429 }
+{ "error": "você já gerou um pomodoro na última hora. tente novamente mais tarde.", "code": 429, "retryAfter": 1380 }
 ```
 
-`details` aparece só em alguns erros 500, com a mensagem original da falha.
+`details` aparece só em alguns erros 500, com a mensagem original da falha. `retryAfter` aparece só no 429.
 
-| Status | Quando                                                |
-| ------ | ----------------------------------------------------- |
-| `429`  | o IP já fez uma extração na última hora               |
-| `500`  | falha na chamada ao Gemini ou resposta fora do schema |
+| Status | Quando                                                                        |
+| ------ | ----------------------------------------------------------------------------- |
+| `400`  | o corpo não veio em `multipart/form-data`                                     |
+| `422`  | imagens inválidas (tipo, tamanho ou quantidade) ou sem conteúdo de estudo     |
+| `429`  | o IP já fez uma extração na última hora (`retryAfter` e header `Retry-After`) |
+| `500`  | falha na chamada ao Gemini ou resposta fora do schema                         |
 
 ### Como a extração funciona
 
@@ -112,7 +118,7 @@ curl -F "images=@aula1.png" -F "images=@aula2.png" http://localhost:3000/lessons
 
 ### Rate limit
 
-Cada extração bem-sucedida grava `pomo:<ip>` no Redis com expiração de **1 hora**. Enquanto a chave existir, o hook `onBeforeHandle` responde 429 para aquele IP. O IP vem dos headers do proxy (`elysia-ip` com `headersOnly: true`); sem proxy, cai em `127.0.0.1`.
+Cada extração bem-sucedida grava `pomo:<ip>` no Redis com expiração de **1 hora**. Enquanto a chave existir, o hook `onBeforeHandle` responde 429 para aquele IP, com o tempo restante em segundos. O IP vem dos headers do proxy (`elysia-ip` com `headersOnly: true`); sem proxy, cai em `127.0.0.1`.
 
 Para liberar o seu IP durante o desenvolvimento:
 

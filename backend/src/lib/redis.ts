@@ -9,5 +9,3 @@ export const redisClient = createClient({
 redisClient.on('error', err => {
 	logger.error({ err }, 'erro no redis')
 })
-
-await redisClient.connect()
