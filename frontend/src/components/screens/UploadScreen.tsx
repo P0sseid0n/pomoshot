@@ -1,7 +1,8 @@
 import type { Treaty } from '@elysiajs/eden'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useEffectEvent, useMemo, useRef, useState } from 'react'
 
 import { Client } from '../../api'
+import { describeImageError, describeImagesError, IMAGE_TYPES, MAX_IMAGES } from '../../utils/images'
 import { CloseIcon } from '../icons/Close'
 import UploadIcon from '../icons/Upload'
 import Button from '../ui/Button'
@@ -26,8 +27,12 @@ export default function UploadScreen({
 	const [errorDisplay, setErrorDisplay] = useState<string>()
 
 	const processFiles = (selectedFiles: File[]) => {
-		setErrorDisplay(undefined)
-		setFiles(prev => [...prev, ...selectedFiles])
+		const rejectionError = selectedFiles.map(describeImageError).find(Boolean)
+		const validFiles = selectedFiles.filter(file => !describeImageError(file))
+		const acceptedFiles = validFiles.slice(0, Math.max(MAX_IMAGES - files.length, 0))
+
+		setErrorDisplay(rejectionError ?? (acceptedFiles.length < validFiles.length ? `envie no máximo ${MAX_IMAGES} imagens.` : undefined))
+		if (acceptedFiles.length > 0) setFiles(prev => [...prev, ...acceptedFiles])
 	}
 
 	const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -41,6 +46,7 @@ export default function UploadScreen({
 	}
 
 	const handleRemoveFile = (index: number) => {
+		setErrorDisplay(undefined)
 		setFiles(prev => prev.filter((_, i) => i !== index))
 	}
 
@@ -59,10 +65,7 @@ export default function UploadScreen({
 		setIsDragging(false)
 
 		if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-			const droppedFiles = Array.from(e.dataTransfer.files).filter(file => file.type.startsWith('image/'))
-
-			if (droppedFiles.length > 0) processFiles(droppedFiles)
-			else setErrorDisplay('apenas arquivos de imagem são permitidos.')
+			processFiles(Array.from(e.dataTransfer.files))
 		}
 	}
 
@@ -82,6 +85,9 @@ export default function UploadScreen({
 		if (files.length === 0) {
 			return setErrorDisplay('adicione pelo menos uma captura de tela para continuar.')
 		}
+
+		const filesError = describeImagesError(files)
+		if (filesError) return setErrorDisplay(filesError)
 
 		setErrorDisplay(undefined)
 		setIsProcessing(true)
@@ -104,15 +110,17 @@ export default function UploadScreen({
 		}
 	}, [filePreviews])
 
-	useEffect(() => {
-		const pasteHandler = async (e: ClipboardEvent) => {
-			const pastedFiles = Array.from(e.clipboardData?.files || []).filter(f => f.type.startsWith('image/'))
+	const onPaste = useEffectEvent((e: ClipboardEvent) => {
+		const pastedFiles = Array.from(e.clipboardData?.files || [])
 
-			if (pastedFiles.length > 0) {
-				processFiles(pastedFiles)
-				e.preventDefault()
-			}
+		if (pastedFiles.length > 0) {
+			processFiles(pastedFiles)
+			e.preventDefault()
 		}
+	})
+
+	useEffect(() => {
+		const pasteHandler = (e: ClipboardEvent) => onPaste(e)
 
 		window.addEventListener('paste', pasteHandler)
 		return () => window.removeEventListener('paste', pasteHandler)
@@ -133,7 +141,7 @@ export default function UploadScreen({
 				<input
 					type="file"
 					multiple
-					accept="image/*"
+					accept={IMAGE_TYPES.join(',')}
 					className="hidden"
 					ref={fileInputRef}
 					onChange={handleFileChange}
