@@ -1,120 +1,111 @@
-# 📘 **pomoshot. — Frontend**
+# pomoshot. — frontend
 
-Frontend da aplicação **pomoshot.**, responsável pela interface onde o usuário envia capturas de tela, configura seus blocos de estudo e utiliza o cronômetro Pomodoro gerado a partir da análise por IA.
+Interface do [pomoshot](../README.md): envio das capturas, configuração dos blocos e o cronômetro pomodoro.
 
----
-
-## 🚀 Visão Geral
-
-Este workspace contém a interface construída com **React + TypeScript**, utilizando **Tailwind CSS** para estilização e **Eden Treaty** para comunicação tipada com o backend Elysia.
-
-O frontend é totalmente focado em:
-
--  Upload de imagens (drag & drop, input e paste)
--  Visualização das capturas
--  Processamento assíncrono com feedback de loading
--  Configuração dos blocos de estudo (foco/pausa)
--  Execução do cronômetro Pomodoro
--  Fluxo suave entre telas
-
-Este projeto foi estruturado para ser simples, direto e fácil de expandir.
+Feito com **React 19 + TypeScript + Tailwind CSS v4** e **Vite**. As chamadas à API usam **Eden Treaty**, que tipa as requisições a partir do próprio backend.
 
 ---
 
-## 🛠️ Tecnologias usadas
-
--  **React**
--  **TypeScript**
--  **Tailwind CSS**
--  **Eden Treaty** (cliente HTTP tipado)
--  **Bun** (para desenvolvimento)
-
----
-
-## ▶️ Como rodar o frontend
+## Rodando
 
 A partir da raiz do monorepo:
 
 ```sh
 bun install
+cp frontend/.env.example frontend/.env
+bun --filter '@pomoshot/frontend' dev
 ```
 
-Entre no workspace:
+A aplicação sobe em `http://localhost:5173`. Para o fluxo completo, o [backend](../backend/README.md) também precisa estar rodando.
 
-```sh
-cd frontend
-```
+### Variáveis de ambiente
 
-Inicie o servidor de desenvolvimento:
+| Variável       | Obrigatória | Descrição                                    |
+| -------------- | ----------- | -------------------------------------------- |
+| `VITE_API_URL` | sim         | URL do backend, ex.: `http://localhost:3000` |
 
-```sh
-bun dev
-```
+Sem ela, o app lança `VITE_API_URL não definida` ao carregar.
 
-A aplicação estará disponível em:
+### Scripts
 
-```
-http://localhost:3000
-```
-
-Caso a porta seja diferente, o terminal exibirá o endereço correto.
+| Comando           | O que faz                                       |
+| ----------------- | ----------------------------------------------- |
+| `bun dev`         | servidor de desenvolvimento                     |
+| `bun run build`   | checagem de tipos (`tsc -b`) + build em `dist/` |
+| `bun run lint`    | ESLint                                          |
+| `bun run preview` | serve o build localmente                        |
 
 ---
 
-## 📁 Estrutura de pastas
+## Fluxo de telas
+
+O `App.tsx` controla a etapa atual (`ScreenStage`) e renderiza uma tela por vez:
+
+| Etapa        | Componente       | O que acontece                                                                 |
+| ------------ | ---------------- | ------------------------------------------------------------------------------ |
+| início       | `StartScreen`    | apresentação e botão para começar                                              |
+| upload       | `UploadScreen`   | envio por clique, arrastar e soltar ou `ctrl+v`; chama `POST /lessons/extract` |
+| configuração | `SetupScreen`    | escolha de foco e pausa, com prévia proporcional da sessão                     |
+| pomodoro     | `PomodoroScreen` | cronômetro, progresso por bloco e tela de conclusão                            |
+
+A divisão em blocos é feita por `generateSessionsData` (`src/utils`): cada tópico vira um bloco de foco, com uma pausa entre eles, até cobrir o `totalMinutes` estimado pela IA.
+
+### No cronômetro
+
+- **espaço** inicia e pausa
+- o tempo restante aparece no título da aba
+- um som (`public/sounds/bell.mp3`) toca na troca de bloco
+- na pausa, o fundo ganha um tom quente
+
+---
+
+## Estrutura
 
 ```
-frontend/
-  ├── src/
-      ├── api/            # Cliente Eden Treaty
-      ├── components/     # Componentes reutilizáveis e telas
-      ├── icons/          # Ícones SVG customizados
-      ├── ui/             # Elementos básicos de interface
-      ├── utils/          # Funções auxiliares
-      ├── types/          # Tipagens centrais
-      ├── public/         # Arquivos estáticos
-      └── main.tsx        # Entry point
+src/
+├── api/                 cliente Eden Treaty
+├── components/
+│   ├── screens/         uma tela por etapa
+│   ├── ui/              Button, Header, Footer, Logo, Segmented
+│   └── icons/           ícones SVG
+├── types/               LessonData, PomodoroSession, ScreenStage
+├── utils/               geração dos blocos
+├── main.css             tokens do tema e estilos base
+└── main.tsx             entry point
+public/
+├── favicon.svg
+└── sounds/bell.mp3
 ```
 
 ---
 
-## 🔄 Fluxo do usuário
+## Tema e estilo
 
-1. **UploadScreen** — Usuário envia imagens (drag & drop / paste)
-2. **ProcessingScreen** — IA analisa lições
-3. **SetupScreen** — Define blocos de foco/pausa
-4. **PomodoroScreen** — Timer executa as sessões
+As cores são tokens definidos em `src/main.css` e expostos ao Tailwind via `@theme`:
 
-As telas são controladas pelo `App.tsx` via enum de estágios.
+| Token                                   | Uso                                        |
+| --------------------------------------- | ------------------------------------------ |
+| `paper` / `surface` / `sunken`          | fundos, do mais baixo ao mais alto         |
+| `ink` / `ink-muted` / `ink-faint`       | texto, do mais forte ao mais fraco         |
+| `line`                                  | bordas e divisores                         |
+| `accent` / `accent-soft` / `accent-ink` | o vermelho tomate, a única cor de destaque |
+
+O modo escuro troca os valores dos tokens via `prefers-color-scheme`, então qualquer componente que use `bg-paper`, `text-ink` etc. já funciona nos dois temas. Evite cores fixas como `neutral-500` ou `red-500`.
+
+Fontes: **Geist** para texto e **Geist Mono** para números (timer, durações, contadores), carregadas do Google Fonts no `index.html`.
 
 ---
 
-## 🔌 Comunicação com o backend
-
-A comunicação é feita usando **Eden Treaty**, que gera um cliente HTTP totalmente tipado com base nas rotas do backend.
-
-Exemplo:
+## Comunicação com o backend
 
 ```ts
-const { data, error } = await Client.lessons.extract.post({ images })
+import { Client } from './api'
+
+const { data, error } = await Client.lessons.extract.post({ images: files })
 ```
 
-Isso garante **tipos consistentes** entre backend e frontend.
+O tipo `App` vem do pacote `@pomoshot/backend`. Se uma rota mudar no backend, o TypeScript aponta os pontos a ajustar aqui.
 
 ---
 
-## 🧭 Próximos passos (Roadmap do frontend)
-
--  [ ] Modo escuro
--  [ ] Melhorias visuais no cronômetro
--  [ ] Animações (Framer Motion)
--  [ ] Edição manual dos blocos de estudo
--  [ ] Histórico local de sessões concluídas
--  [ ] Suporte total para mobile
--  [ ] Feedback sonoro ao final do bloco
-
----
-
-## 📌 Status
-
-Workspace em desenvolvimento ativo. Nenhuma licença aplicada ainda.
+Próximos passos ficam nas [issues com a label `frontend`](https://github.com/P0sseid0n/pomoshot/issues?q=is%3Aopen+label%3Afrontend). Licenciado sob a [AGPL-3.0](../LICENSE).

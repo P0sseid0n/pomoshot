@@ -1,139 +1,131 @@
-# 📘 **pomoshot. — Backend**
+# pomoshot. — backend
 
-Backend da aplicação **pomoshot.**, responsável por receber as imagens enviadas pelo usuário, enviá-las ao modelo de IA, validar a resposta e retornar um objeto estruturado contendo:
+API do [pomoshot](../README.md). Recebe as capturas de tela, envia para o Gemini, valida a resposta e devolve o assunto, os tópicos e o tempo estimado de estudo. Também aplica o rate limit por IP usando o Redis.
 
--  tempo total estimado de estudo
--  título / matéria principal
--  lista de tópicos identificados
-
-Este workspace foi projetado para ser simples e direto: um único endpoint que processa imagens via **Google GenAI** usando **Elysia + Bun**.
+Feito com **Bun + Elysia**. O tipo do app (`App`) é exportado e consumido pelo frontend via **Eden Treaty**, então a API é tipada de ponta a ponta.
 
 ---
 
-## 🚀 Visão Geral
+## Stack
 
-Este backend:
-
--  recebe múltiplas imagens (`multipart/form-data`)
--  converte cada uma para Base64
--  envia as imagens para o modelo **gemini-2.5-flash**
--  força a resposta ser JSON usando `responseMimeType`
--  valida estruturalmente a resposta com **TypeBox**
--  retorna o resultado tipado para o frontend via **Eden Treaty**
-
-O objetivo é ser extremamente enxuto e rápido.
+| Pacote                | Uso                                             |
+| --------------------- | ----------------------------------------------- |
+| `elysia`              | servidor HTTP e validação do body (`t.Files`)   |
+| `@google/genai`       | chamada ao `gemini-2.5-flash` com resposta JSON |
+| `@sinclair/typebox`   | validação da resposta da IA (`Value.Parse`)     |
+| `redis` + `elysia-ip` | rate limit por IP                               |
+| `@elysiajs/cors`      | CORS                                            |
+| `@elysiajs/openapi`   | documentação automática em `/openapi`           |
 
 ---
 
-## 🛠️ Tecnologias usadas
-
--  **Bun** (runtime)
--  **Elysia** (framework HTTP)
--  **@elysiajs/cors**
--  **@elysiajs/openapi** (documentação automática)
--  **Google GenAI SDK**
--  **TypeBox** para validação de schema
-
----
-
-## ▶️ Como rodar o backend
+## Rodando
 
 A partir da raiz do monorepo:
 
 ```sh
 bun install
+cp backend/.env.example backend/.env    # preencha GEMINI_API_KEY
+docker compose up -d redis
+bun --filter '@pomoshot/backend' dev
 ```
 
-Entre no backend:
+A API sobe em `http://localhost:3000` e a documentação fica em `http://localhost:3000/openapi`.
 
-```sh
-cd backend
-```
+### Variáveis de ambiente
 
-Crie um arquivo `.env` com sua chave:
+| Variável         | Obrigatória | Descrição                | Padrão                   |
+| ---------------- | ----------- | ------------------------ | ------------------------ |
+| `GEMINI_API_KEY` | sim         | chave da API do Gemini   | —                        |
+| `REDIS_URL`      | não         | URL de conexão do Redis  | `redis://localhost:6379` |
+| `CORS_ORIGIN`    | não         | origem permitida no CORS | qualquer origem          |
 
-```
-GEMINI_API_KEY=your_key_here
-```
+### Scripts
 
-Inicie o servidor:
-
-```sh
-bun dev
-```
-
-O backend rodará em:
-
-```
-http://localhost:3000
-```
-
-> O frontend se comunica automaticamente com esse endereço via Eden Treaty.
+| Comando         | O que faz                                             |
+| --------------- | ----------------------------------------------------- |
+| `bun dev`       | servidor com recarregamento automático                |
+| `bun run build` | gera o bundle em `dist/`                              |
+| `bun run types` | gera os tipos em `dist-types/` (usados pelo frontend) |
+| `bun start`     | roda o bundle em modo produção                        |
 
 ---
 
-## 📁 Estrutura
+## Estrutura
 
 ```
-backend/
-  └── src/
-      └── index.ts   # Toda lógica da API
+src/
+├── index.ts                  app Elysia: CORS, OpenAPI e rate limit
+├── modules/lessons/
+│   ├── index.ts              rota POST /lessons/extract
+│   └── model.ts              schemas do body e da resposta
+├── services/redis.ts         leitura e escrita do cache por IP
+├── lib/
+│   ├── gemini.ts             cliente do Gemini
+│   └── redis.ts              cliente do Redis (conecta na inicialização)
+├── errors/ResponseError.ts   erro padronizado da API
+├── types/                    tipos compartilhados
+└── utils/                    helpers (ex.: arquivo → base64)
 ```
 
 ---
 
-## 🔌 Endpoint principal
+## API
 
-### **POST /lessons/extract**
+### `POST /lessons/extract`
 
-Recebe imagens e retorna:
+Recebe as imagens em `multipart/form-data`, no campo `images` (um ou mais arquivos).
+
+```sh
+curl -F "images=@aula1.png" -F "images=@aula2.png" http://localhost:3000/lessons/extract
+```
+
+**200**
 
 ```json
 {
-	"totalMinutes": 90,
-	"title": "Álgebra Linear — Matrizes",
-	"lessons": ["introdução às matrizes", "operações básicas", "matriz identidade"]
+  "totalMinutes": 85,
+  "title": "Fundamentos de Redes de Computadores",
+  "lessons": ["Modelo OSI e TCP/IP", "Endereçamento IPv4", "Sub-redes na prática"]
 }
 ```
 
-### Corpo da requisição
+**Erros** seguem sempre o mesmo formato:
 
--  `multipart/form-data`
--  campo: `images` (array de arquivos)
+```json
+{ "error": "Rate limit exceeded", "code": 429 }
+```
 
-### Respostas
+`details` aparece só em alguns erros 500, com a mensagem original da falha.
 
--  **200** → sucesso com conteúdo estruturado
--  **500** → erro interno ou resposta inválida da IA
+| Status | Quando                                                |
+| ------ | ----------------------------------------------------- |
+| `429`  | o IP já fez uma extração na última hora               |
+| `500`  | falha na chamada ao Gemini ou resposta fora do schema |
 
----
+### Como a extração funciona
 
-## 🔐 Validação
+1. Cada imagem é convertida para base64 e enviada ao Gemini junto com o prompt.
+2. O modelo responde em JSON (`responseMimeType: application/json`) seguindo um `responseJsonSchema`.
+3. A resposta é validada com `Value.Parse`. Se não bater com o schema, a API devolve 500.
+4. Em caso de sucesso, o resultado é gravado no Redis e liberado para o frontend.
 
-O backend valida:
+### Rate limit
 
-1. que o modelo retornou JSON
-2. que o JSON possui `totalMinutes`, `title`, `lessons`
-3. que os tipos são coerentes
+Cada extração bem-sucedida grava `pomo:<ip>` no Redis com expiração de **1 hora**. Enquanto a chave existir, o hook `onBeforeHandle` responde 429 para aquele IP. O IP vem dos headers do proxy (`elysia-ip` com `headersOnly: true`); sem proxy, cai em `127.0.0.1`.
 
-Validation stack:
+Para liberar o seu IP durante o desenvolvimento:
 
--  `Value.Check()` para validar
--  `Value.Cast()` para normalizar
-
----
-
-## 🧭 Roadmap do backend
-
--  [ ] Validar o conteúdo das imagens (garantir que sejam slides ou materiais de estudo antes do processamento)
--  [ ] Logs estruturados em JSON
--  [ ] Suporte a diferentes modelos de IA
--  [ ] Cache opcional das análises
--  [ ] Exportar schema OpenAPI para documentação externa
--  [ ] Testes automatizados (Elysia + Bun test)
+```sh
+docker exec pomoshot-redis sh -c "redis-cli --scan --pattern 'pomo:*' | xargs -r redis-cli del"
+```
 
 ---
 
-## 📌 Status
+## Problemas comuns
 
-Workspace em desenvolvimento ativo. Nenhuma licença aplicada ainda.
+**`ECONNREFUSED 127.0.0.1:6379` ao iniciar**: o Redis não está rodando. Rode `docker compose up -d redis` na raiz e reinicie o servidor. (Fazer o backend subir mesmo sem Redis está na [#2](https://github.com/P0sseid0n/pomoshot/issues/2).)
+
+---
+
+Próximos passos ficam nas [issues com a label `backend`](https://github.com/P0sseid0n/pomoshot/issues?q=is%3Aopen+label%3Abackend). Licenciado sob a [AGPL-3.0](../LICENSE).
