@@ -4,11 +4,13 @@ import { Elysia } from 'elysia'
 import { ip } from 'elysia-ip'
 
 import { ResponseError } from './errors/ResponseError'
+import { logger, requestLogger } from './lib/logger'
 import { LessonRoutes } from './modules/lessons'
 import { getCachedPomo } from './services/redis'
 
 export const App = new Elysia()
 	.use(ip({ headersOnly: true }))
+	.use(requestLogger)
 	.use(cors({ origin: process.env.CORS_ORIGIN ?? true }))
 	.use(openapi())
 	.error({ ResponseError })
@@ -17,10 +19,8 @@ export const App = new Elysia()
 		ip ||= '127.0.0.1'
 
 		if (await getCachedPomo(ip)) {
-			console.log(`❌ Rate limit exceeded for IP: ${ip}`)
+			logger.warn({ ip }, 'rate limit excedido')
 			throw new ResponseError({ statusCode: 429, error: 'Rate limit exceeded' }).toResponse()
-		} else {
-			console.log(`📡 Request from IP: ${ip}`)
 		}
 	})
 
@@ -32,7 +32,7 @@ export const App = new Elysia()
 			hostname: '0.0.0.0',
 		},
 		server => {
-			console.log(`🦊 Elysia is running at ${server.hostname}:${server.port}`)
+			logger.info({ hostname: server.hostname, port: server.port }, 'servidor iniciado')
 		},
 	)
 

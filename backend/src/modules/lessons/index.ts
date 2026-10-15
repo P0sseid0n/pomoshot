@@ -5,6 +5,7 @@ import { ip as ipPlugin } from 'elysia-ip'
 
 import { ResponseError } from '../../errors/ResponseError'
 import { gemini } from '../../lib/gemini'
+import { logger } from '../../lib/logger'
 import { setCachedPomo } from '../../services/redis'
 import type { LessonExtractResponse } from '../../types'
 import { fileToBase64 } from '../../utils'
@@ -20,16 +21,17 @@ export const LessonRoutes = new Elysia({ prefix: '/lessons' })
 		const files = (Array.isArray(images) ? images : [images]).filter(image => image instanceof File)
 		const error = describeImagesError(files) ?? 'um dos arquivos enviados não é uma imagem válida.'
 
-		console.log(`❌ Upload inválido: ${error}`)
+		logger.warn({ reason: error }, 'upload inválido')
 		return new ResponseError({ error, statusCode: 422 }).toResponse()
 	})
 	.post(
 		'/extract',
 		async ({ body, status, ip }) => {
-			console.log(`🚀 ${body.images.length} Arquivos recebidos`)
-
 			const imagesError = describeImagesError(body.images)
-			if (imagesError) throw new ResponseError({ error: imagesError, statusCode: 422 }).toResponse()
+			if (imagesError) {
+				logger.warn({ reason: imagesError }, 'upload inválido')
+				throw new ResponseError({ error: imagesError, statusCode: 422 }).toResponse()
+			}
 
 			const parts: Part[] = await Promise.all(
 				body.images.map(async file => ({
@@ -51,7 +53,8 @@ export const LessonRoutes = new Elysia({ prefix: '/lessons' })
 			})
 
 			try {
-				console.log('🤖 Gerando resposta do modelo...')
+				const modelStartedAt = performance.now()
+				logger.debug({ imageCount: body.images.length }, 'gerando resposta do modelo')
 				const response = await gemini.models.generateContent({
 					model: 'gemini-2.5-flash',
 					contents: {
@@ -78,10 +81,10 @@ export const LessonRoutes = new Elysia({ prefix: '/lessons' })
 						},
 					},
 				})
-				console.log('✅ Resposta recebida do modelo.')
+				logger.debug({ modelDurationMs: Math.round(performance.now() - modelStartedAt) }, 'resposta do modelo recebida')
 
 				if (!response.text) {
-					console.log('❌ Resposta do modelo não contém texto')
+					logger.error('resposta do modelo não contém texto')
 					throw new ResponseError({ error: 'Resposta do modelo não contém texto' })
 				}
 
@@ -92,16 +95,15 @@ export const LessonRoutes = new Elysia({ prefix: '/lessons' })
 					const { isStudyMaterial, ...rest } = Value.Parse(Model.LessonExtractAIResponse, json)
 
 					if (!isStudyMaterial) {
-						console.log('❌ Imagens não contêm material de estudo')
+						logger.warn('imagens não contêm material de estudo')
 						throw new ResponseError({ error: 'não encontramos conteúdo de estudo nessas imagens', statusCode: 422 })
 					}
 
 					parsed = rest
-					console.log('✅ Resposta validada.')
 				} catch (error) {
 					if (error instanceof ResponseError) throw error
 
-					console.log('❌ Resposta inválida da IA')
+					logger.error({ err: error, response: json }, 'resposta inválida da IA')
 					throw new ResponseError({ error: 'Resposta inválida da IA' })
 				}
 
@@ -111,7 +113,7 @@ export const LessonRoutes = new Elysia({ prefix: '/lessons' })
 			} catch (error) {
 				if (error instanceof ResponseError) throw error.toResponse()
 
-				console.error('Erro ao gerar conteúdo:', error)
+				logger.error({ err: error }, 'erro ao gerar conteúdo')
 				throw new ResponseError({ error: 'Erro ao processar os arquivos', details: String(error), statusCode: 500 }).toResponse()
 			}
 		},

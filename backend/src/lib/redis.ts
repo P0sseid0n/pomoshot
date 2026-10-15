@@ -1,11 +1,13 @@
 import { createClient } from 'redis'
 
+import { logger } from './logger'
+
 export const redisClient = createClient({
 	url: process.env.REDIS_URL,
 })
 
 redisClient.on('error', err => {
-	console.error('❌ Redis error:', err)
+	logger.error({ err }, 'erro no redis')
 })
 
 await redisClient.connect()
