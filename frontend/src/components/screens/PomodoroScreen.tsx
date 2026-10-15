@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useEffectEvent, useMemo, useState } from 'react'
 
+import { useWakeLock } from '../../hooks/useWakeLock'
 import type { LessonData } from '../../types'
 import { generateSessionsData } from '../../utils'
 import { clearSession, updateSessionProgress, type PomodoroProgress } from '../../utils/session'
@@ -75,13 +76,40 @@ export default function PomodoroScreen({
 		}
 	}, [sessions, currentSessionIndex])
 
+	const getTimeLeft = useEffectEvent(() => timeLeft)
+	const onBlockEnd = useEffectEvent(handleNextSession)
+
+	// O tempo restante vem de um horário de fim, e não de decrementos a cada segundo: se o navegador
+	// atrasar ou suspender a aba (comum no celular), o timer se corrige no próximo tick.
 	useEffect(() => {
 		if (!isTimerRunning) return
 
-		const timeout = setTimeout(() => (timeLeft > 0 ? setTimeLeft(timeLeft - 1) : handleNextSession()), timeLeft > 0 ? 1000 : 0)
+		const endsAt = Date.now() + getTimeLeft() * 1000
+		let ended = false
 
-		return () => clearTimeout(timeout)
-	}, [isTimerRunning, timeLeft, handleNextSession])
+		const tick = () => {
+			if (ended) return
+
+			const remaining = Math.max(0, Math.ceil((endsAt - Date.now()) / 1000))
+			setTimeLeft(remaining)
+
+			if (remaining === 0) {
+				ended = true
+				onBlockEnd()
+			}
+		}
+
+		tick()
+		const interval = setInterval(tick, 250)
+		document.addEventListener('visibilitychange', tick)
+
+		return () => {
+			clearInterval(interval)
+			document.removeEventListener('visibilitychange', tick)
+		}
+	}, [isTimerRunning])
+
+	useWakeLock(isTimerRunning)
 
 	useEffect(() => {
 		if (isFinished) clearSession()
