@@ -1,8 +1,8 @@
 import { App } from './app'
 import { logger } from './lib/logger'
-import { redisClient } from './lib/redis'
+import { connectRedis } from './lib/redis'
 
-await redisClient.connect()
+connectRedis()
 
 App.listen(
 	{
