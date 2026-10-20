@@ -72,7 +72,7 @@ function App() {
 				lessonData={lessonData!}
 				initialFocoDuration={focoDuration}
 				initialBreakDuration={breakDuration}
-				onStartSession={(focoDuration, breakDuration) => startSession(lessonData!, focoDuration, breakDuration)}
+				onStartSession={startSession}
 				onBackStage={() => goTo(ScreenStage.UPLOAD)}
 				onReset={() => goTo(ScreenStage.WELCOME)}
 			/>

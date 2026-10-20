@@ -8,12 +8,13 @@ export type ShareLink =
 	{ status: 'loading' } | { status: 'ready'; url: string; expiresInDays: number } | { status: 'error'; message: string }
 
 /**
- * Cria o link de compartilhamento do plano sob demanda e guarda um link por combinação de foco e pausa,
+ * Cria o link de compartilhamento do plano sob demanda e guarda um link por versão do plano (tópicos, foco e pausa),
  * para não criar um novo a cada vez que o diálogo abre.
  */
 export const useShareLink = (lessonData: LessonData, focoDuration: number, breakDuration: number) => {
 	const [links, setLinks] = useState<Record<string, ShareLink>>({})
-	const key = `${focoDuration}-${breakDuration}`
+	// o plano entra na chave porque os tópicos e o tempo podem ser editados antes de compartilhar
+	const key = JSON.stringify([lessonData, focoDuration, breakDuration])
 
 	const share = async () => {
 		const current = links[key]
