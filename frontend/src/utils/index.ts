@@ -1,5 +1,12 @@
 import type { LessonData, PomodoroSession } from '../types'
 
+export const formatMinutes = (total: number) => {
+	const hours = Math.floor(total / 60)
+	const minutes = total % 60
+	if (!hours) return `${minutes}m`
+	return `${hours}h ${minutes.toString().padStart(2, '0')}m`
+}
+
 export const generateSessionsData = ({
 	focoDuration,
 	breakDuration,

@@ -36,6 +36,7 @@ Você tira prints da lista de aulas de um curso (ou dos slides), envia para o po
 - upload por clique, arrastar e soltar ou `ctrl+v`
 - extração de assunto, tópicos e duração via Gemini (`gemini-2.5-flash`) com resposta em JSON validada
 - configuração de foco e pausa com prévia da sessão
+- compartilhamento do plano por link curto (válido por 7 dias), sem precisar reenviar as capturas
 - cronômetro com barra de progresso por bloco, atalho de teclado (espaço), tempo no título da aba e som ao trocar de bloco
 - modo escuro automático (segue o sistema)
 - limite de uma extração por IP a cada hora, guardado no Redis

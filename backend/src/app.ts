@@ -4,9 +4,9 @@ import { Elysia } from 'elysia'
 import { ip } from 'elysia-ip'
 
 import { ResponseError } from './errors/ResponseError'
-import { logger, requestLogger } from './lib/logger'
+import { requestLogger } from './lib/logger'
 import { LessonRoutes } from './modules/lessons'
-import { getRateLimitTtl } from './services/redis'
+import { PlanRoutes } from './modules/plans'
 
 export const App = new Elysia()
 	.use(ip({ headersOnly: true }))
@@ -19,26 +19,16 @@ export const App = new Elysia()
 					title: 'pomoshot API',
 					version: '1.0.0',
 					description:
-						'Recebe capturas de tela de aulas, usa o Gemini para identificar o assunto, os tópicos e o tempo de estudo, e devolve os dados para montar o plano pomodoro. Cada IP pode gerar um plano por hora.',
+						'Recebe capturas de tela de aulas, usa o Gemini para identificar o assunto, os tópicos e o tempo de estudo, e devolve os dados para montar o plano pomodoro. Cada IP pode gerar um plano por hora. Os planos podem ser compartilhados por um link que dura 7 dias.',
 				},
-				tags: [{ name: 'lessons', description: 'Extração de aulas a partir de imagens' }],
+				tags: [
+					{ name: 'lessons', description: 'Extração de aulas a partir de imagens' },
+					{ name: 'plans', description: 'Links para compartilhar um plano de estudo' },
+				],
 			},
 		}),
 	)
 	.error({ ResponseError })
 
-	.onBeforeHandle(async ({ ip }) => {
-		ip ||= '127.0.0.1'
-
-		const retryAfter = await getRateLimitTtl(ip)
-		if (retryAfter !== null) {
-			logger.warn({ ip, retryAfter }, 'rate limit excedido')
-			throw new ResponseError({
-				statusCode: 429,
-				error: 'você já gerou um pomodoro na última hora. tente novamente mais tarde.',
-				retryAfter,
-			}).toResponse()
-		}
-	})
-
 	.use(LessonRoutes)
+	.use(PlanRoutes)

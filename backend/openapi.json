@@ -2,13 +2,17 @@
 	"openapi": "3.0.3",
 	"info": {
 		"title": "pomoshot API",
-		"description": "Recebe capturas de tela de aulas, usa o Gemini para identificar o assunto, os tópicos e o tempo de estudo, e devolve os dados para montar o plano pomodoro. Cada IP pode gerar um plano por hora.",
+		"description": "Recebe capturas de tela de aulas, usa o Gemini para identificar o assunto, os tópicos e o tempo de estudo, e devolve os dados para montar o plano pomodoro. Cada IP pode gerar um plano por hora. Os planos podem ser compartilhados por um link que dura 7 dias.",
 		"version": "1.0.0"
 	},
 	"tags": [
 		{
 			"name": "lessons",
 			"description": "Extração de aulas a partir de imagens"
+		},
+		{
+			"name": "plans",
+			"description": "Links para compartilhar um plano de estudo"
 		}
 	],
 	"paths": {
@@ -218,6 +222,525 @@
 					}
 				},
 				"operationId": "postLessonsExtract"
+			}
+		},
+		"/plans/": {
+			"post": {
+				"tags": [
+					"plans"
+				],
+				"summary": "Cria um link para o plano",
+				"description": "Guarda o plano (assunto, tópicos e duração dos blocos) por 7 dias e devolve um ID curto para montar o link.\n\n- **429**: o IP criou mais de 30 links na última hora; `retryAfter` e o header `Retry-After` dizem quantos segundos faltam.\n- **503**: o Redis está fora do ar.",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"lessonData": {
+										"type": "object",
+										"properties": {
+											"totalMinutes": {
+												"minimum": 1,
+												"maximum": 1440,
+												"description": "Tempo total de estudo, em minutos",
+												"type": "number"
+											},
+											"title": {
+												"minLength": 1,
+												"maxLength": 200,
+												"description": "Assunto principal do material",
+												"type": "string"
+											},
+											"lessons": {
+												"maxItems": 100,
+												"description": "Tópicos ou títulos das aulas, em ordem",
+												"type": "array",
+												"items": {
+													"maxLength": 200,
+													"type": "string"
+												}
+											}
+										},
+										"required": [
+											"totalMinutes",
+											"title",
+											"lessons"
+										]
+									},
+									"focoDuration": {
+										"minimum": 1,
+										"maximum": 120,
+										"description": "Duração de cada bloco de foco, em minutos",
+										"anyOf": [
+											{
+												"format": "integer",
+												"default": 0,
+												"type": "string"
+											},
+											{
+												"minimum": 1,
+												"maximum": 120,
+												"description": "Duração de cada bloco de foco, em minutos",
+												"type": "integer"
+											}
+										]
+									},
+									"breakDuration": {
+										"minimum": 1,
+										"maximum": 120,
+										"description": "Duração de cada pausa, em minutos",
+										"anyOf": [
+											{
+												"format": "integer",
+												"default": 0,
+												"type": "string"
+											},
+											{
+												"minimum": 1,
+												"maximum": 120,
+												"description": "Duração de cada pausa, em minutos",
+												"type": "integer"
+											}
+										]
+									}
+								},
+								"required": [
+									"lessonData",
+									"focoDuration",
+									"breakDuration"
+								]
+							}
+						},
+						"application/x-www-form-urlencoded": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"lessonData": {
+										"type": "object",
+										"properties": {
+											"totalMinutes": {
+												"minimum": 1,
+												"maximum": 1440,
+												"description": "Tempo total de estudo, em minutos",
+												"type": "number"
+											},
+											"title": {
+												"minLength": 1,
+												"maxLength": 200,
+												"description": "Assunto principal do material",
+												"type": "string"
+											},
+											"lessons": {
+												"maxItems": 100,
+												"description": "Tópicos ou títulos das aulas, em ordem",
+												"type": "array",
+												"items": {
+													"maxLength": 200,
+													"type": "string"
+												}
+											}
+										},
+										"required": [
+											"totalMinutes",
+											"title",
+											"lessons"
+										]
+									},
+									"focoDuration": {
+										"minimum": 1,
+										"maximum": 120,
+										"description": "Duração de cada bloco de foco, em minutos",
+										"anyOf": [
+											{
+												"format": "integer",
+												"default": 0,
+												"type": "string"
+											},
+											{
+												"minimum": 1,
+												"maximum": 120,
+												"description": "Duração de cada bloco de foco, em minutos",
+												"type": "integer"
+											}
+										]
+									},
+									"breakDuration": {
+										"minimum": 1,
+										"maximum": 120,
+										"description": "Duração de cada pausa, em minutos",
+										"anyOf": [
+											{
+												"format": "integer",
+												"default": 0,
+												"type": "string"
+											},
+											{
+												"minimum": 1,
+												"maximum": 120,
+												"description": "Duração de cada pausa, em minutos",
+												"type": "integer"
+											}
+										]
+									}
+								},
+								"required": [
+									"lessonData",
+									"focoDuration",
+									"breakDuration"
+								]
+							}
+						},
+						"multipart/form-data": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"lessonData": {
+										"type": "object",
+										"properties": {
+											"totalMinutes": {
+												"minimum": 1,
+												"maximum": 1440,
+												"description": "Tempo total de estudo, em minutos",
+												"type": "number"
+											},
+											"title": {
+												"minLength": 1,
+												"maxLength": 200,
+												"description": "Assunto principal do material",
+												"type": "string"
+											},
+											"lessons": {
+												"maxItems": 100,
+												"description": "Tópicos ou títulos das aulas, em ordem",
+												"type": "array",
+												"items": {
+													"maxLength": 200,
+													"type": "string"
+												}
+											}
+										},
+										"required": [
+											"totalMinutes",
+											"title",
+											"lessons"
+										]
+									},
+									"focoDuration": {
+										"minimum": 1,
+										"maximum": 120,
+										"description": "Duração de cada bloco de foco, em minutos",
+										"anyOf": [
+											{
+												"format": "integer",
+												"default": 0,
+												"type": "string"
+											},
+											{
+												"minimum": 1,
+												"maximum": 120,
+												"description": "Duração de cada bloco de foco, em minutos",
+												"type": "integer"
+											}
+										]
+									},
+									"breakDuration": {
+										"minimum": 1,
+										"maximum": 120,
+										"description": "Duração de cada pausa, em minutos",
+										"anyOf": [
+											{
+												"format": "integer",
+												"default": 0,
+												"type": "string"
+											},
+											{
+												"minimum": 1,
+												"maximum": 120,
+												"description": "Duração de cada pausa, em minutos",
+												"type": "integer"
+											}
+										]
+									}
+								},
+								"required": [
+									"lessonData",
+									"focoDuration",
+									"breakDuration"
+								]
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "Response for status 201",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"id": {
+											"description": "ID curto do plano; o link é /?p=<id>",
+											"type": "string"
+										},
+										"expiresAt": {
+											"description": "Quando o link expira, em milissegundos desde a época Unix",
+											"type": "number"
+										}
+									},
+									"required": [
+										"id",
+										"expiresAt"
+									]
+								}
+							}
+						}
+					},
+					"429": {
+						"description": "Response for status 429",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"error": {
+											"description": "Mensagem do erro, pronta para mostrar ao usuário",
+											"type": "string"
+										},
+										"code": {
+											"description": "Status HTTP",
+											"type": "number"
+										},
+										"details": {
+											"description": "Detalhes técnicos da falha (só em alguns erros 500)",
+											"type": "string"
+										},
+										"retryAfter": {
+											"description": "Segundos até liberar uma nova extração (só no 429)",
+											"type": "number"
+										}
+									},
+									"required": [
+										"error",
+										"code"
+									]
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Response for status 503",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"error": {
+											"description": "Mensagem do erro, pronta para mostrar ao usuário",
+											"type": "string"
+										},
+										"code": {
+											"description": "Status HTTP",
+											"type": "number"
+										},
+										"details": {
+											"description": "Detalhes técnicos da falha (só em alguns erros 500)",
+											"type": "string"
+										},
+										"retryAfter": {
+											"description": "Segundos até liberar uma nova extração (só no 429)",
+											"type": "number"
+										}
+									},
+									"required": [
+										"error",
+										"code"
+									]
+								}
+							}
+						}
+					}
+				},
+				"operationId": "postPlans"
+			}
+		},
+		"/plans/{id}": {
+			"get": {
+				"tags": [
+					"plans"
+				],
+				"summary": "Abre um plano compartilhado",
+				"description": "- **404**: o link expirou ou nunca existiu.\n- **503**: o Redis está fora do ar.",
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"schema": {
+							"maxLength": 32,
+							"description": "ID curto do plano, vindo do link compartilhado",
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Response for status 200",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"lessonData": {
+											"type": "object",
+											"properties": {
+												"totalMinutes": {
+													"minimum": 1,
+													"maximum": 1440,
+													"description": "Tempo total de estudo, em minutos",
+													"type": "number"
+												},
+												"title": {
+													"minLength": 1,
+													"maxLength": 200,
+													"description": "Assunto principal do material",
+													"type": "string"
+												},
+												"lessons": {
+													"maxItems": 100,
+													"description": "Tópicos ou títulos das aulas, em ordem",
+													"type": "array",
+													"items": {
+														"maxLength": 200,
+														"type": "string"
+													}
+												}
+											},
+											"required": [
+												"totalMinutes",
+												"title",
+												"lessons"
+											]
+										},
+										"focoDuration": {
+											"minimum": 1,
+											"maximum": 120,
+											"description": "Duração de cada bloco de foco, em minutos",
+											"anyOf": [
+												{
+													"format": "integer",
+													"default": 0,
+													"type": "string"
+												},
+												{
+													"minimum": 1,
+													"maximum": 120,
+													"description": "Duração de cada bloco de foco, em minutos",
+													"type": "integer"
+												}
+											]
+										},
+										"breakDuration": {
+											"minimum": 1,
+											"maximum": 120,
+											"description": "Duração de cada pausa, em minutos",
+											"anyOf": [
+												{
+													"format": "integer",
+													"default": 0,
+													"type": "string"
+												},
+												{
+													"minimum": 1,
+													"maximum": 120,
+													"description": "Duração de cada pausa, em minutos",
+													"type": "integer"
+												}
+											]
+										},
+										"expiresAt": {
+											"description": "Quando o link expira, em milissegundos desde a época Unix",
+											"type": "number"
+										}
+									},
+									"required": [
+										"lessonData",
+										"focoDuration",
+										"breakDuration",
+										"expiresAt"
+									]
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Response for status 404",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"error": {
+											"description": "Mensagem do erro, pronta para mostrar ao usuário",
+											"type": "string"
+										},
+										"code": {
+											"description": "Status HTTP",
+											"type": "number"
+										},
+										"details": {
+											"description": "Detalhes técnicos da falha (só em alguns erros 500)",
+											"type": "string"
+										},
+										"retryAfter": {
+											"description": "Segundos até liberar uma nova extração (só no 429)",
+											"type": "number"
+										}
+									},
+									"required": [
+										"error",
+										"code"
+									]
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Response for status 503",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"error": {
+											"description": "Mensagem do erro, pronta para mostrar ao usuário",
+											"type": "string"
+										},
+										"code": {
+											"description": "Status HTTP",
+											"type": "number"
+										},
+										"details": {
+											"description": "Detalhes técnicos da falha (só em alguns erros 500)",
+											"type": "string"
+										},
+										"retryAfter": {
+											"description": "Segundos até liberar uma nova extração (só no 429)",
+											"type": "number"
+										}
+									},
+									"required": [
+										"error",
+										"code"
+									]
+								}
+							}
+						}
+					}
+				},
+				"operationId": "getPlansById"
 			}
 		}
 	},

@@ -6,7 +6,7 @@ import { ip as ipPlugin } from 'elysia-ip'
 import { ResponseError, ResponseErrorBody } from '../../errors/ResponseError'
 import { gemini } from '../../lib/gemini'
 import { logger } from '../../lib/logger'
-import { setCachedPomo } from '../../services/redis'
+import { getRateLimitTtl, setCachedPomo } from '../../services/redis'
 import type { LessonExtractResponse } from '../../types'
 import { fileToBase64 } from '../../utils'
 import { describeImagesError, MAX_IMAGE_SIZE_MB, MAX_IMAGES, MAX_TOTAL_SIZE_MB } from './limits'
@@ -28,6 +28,19 @@ export const LessonRoutes = new Elysia({ prefix: '/lessons' })
 
 		logger.warn({ reason: error }, 'upload inválido')
 		return new ResponseError({ error, statusCode: 422 }).toResponse()
+	})
+	.onBeforeHandle(async ({ ip }) => {
+		ip ||= '127.0.0.1'
+
+		const retryAfter = await getRateLimitTtl(ip)
+		if (retryAfter !== null) {
+			logger.warn({ ip, retryAfter }, 'rate limit excedido')
+			throw new ResponseError({
+				statusCode: 429,
+				error: 'você já gerou um pomodoro na última hora. tente novamente mais tarde.',
+				retryAfter,
+			}).toResponse()
+		}
 	})
 	.post(
 		'/extract',
